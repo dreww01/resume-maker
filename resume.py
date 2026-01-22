@@ -7,6 +7,8 @@ from docx.enum.text import WD_ALIGN_PARAGRAPH
 from openai import OpenAI
 from dotenv import load_dotenv
 
+from prompts.resume_tailor import SYSTEM_PROMPT, USER_PROMPT_TEMPLATE
+
 load_dotenv()
 openai_api_key = os.getenv("OPENAI_API_KEY")
 
@@ -33,77 +35,17 @@ def read_resume(file_path):
 
 
 def call_openai(resume_text, job_description):
-    
     client = OpenAI(api_key=openai_api_key)
 
-    system_prompt = """You are a professional resume writer specializing in ATS optimization.
-
-Your task:
-1. Extract the candidate's information from the provided resume
-2. Tailor content to align with the target job description
-3. Integrate relevant keywords from the job description into experience bullets, skills, and summary
-4. Write in clear, direct language without filler words, buzzwords, or em-dashes
-5. Use strong action verbs and quantify achievements where possible
-6. Ensure the professional summary directly addresses what the role requires
-
-Guidelines:
-- Mirror terminology from the job description (e.g., if they say "CI/CD pipelines," use that exact phrase)
-- Keep bullets concise and results-focused
-- Prioritize skills and experiences that match the job requirements
-- Maintain a professional, confident tone throughout
-
-Return the data in this exact JSON format:
-{
-    "name": "Full Name",
-    "email": "email@example.com",
-    "phone": "phone number",
-    "github": "github link",
-    "professional_summary": "2-3 sentences tailored to the job",
-    "work_experience": [
-        {
-            "title": "Job Title",
-            "company": "Company Name",
-            "duration": "Start - End",
-            "bullets": ["achievement 1", "achievement 2"]
-        }
-    ],
-    "projects": [
-        {
-            "name": "Project Name",
-            "bullets": ["achievement/feature 1", "achievement/feature 2", "achievement/feature 3"]
-        }
-    ],
-    "skills": [
-        "Skill 1",
-        "Skill 2",
-        "Skill 3"
-    ],
-    "soft_skills": [
-        "Skill 1",
-        "Skill 2",
-        "Skill 3"
-    ],
-    "education": [
-        {
-            "degree": "Degree",
-            "institution": "Institution",
-            "year": "Year"
-        }
-    ]
-}"""
-
-    user_prompt = f"""Here is the resume:
-{resume_text}
-
-Here is the job description:
-{job_description}
-
-Extract all information and tailor the resume to match this job. Use keywords from the job description."""
+    user_prompt = USER_PROMPT_TEMPLATE.format(
+        resume_text=resume_text,
+        job_description=job_description
+    )
 
     response = client.chat.completions.create(
         model="gpt-4.1-nano",
         messages=[
-            {"role": "system", "content": system_prompt},
+            {"role": "system", "content": SYSTEM_PROMPT},
             {"role": "user", "content": user_prompt}
         ],
         response_format={"type": "json_object"}

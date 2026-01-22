@@ -83,14 +83,15 @@ def download_resume(resume_id: int):
     if not resume["output_filename"] or not os.path.exists(resume["output_filename"]):
         raise HTTPException(404, "Output file not found")
 
+    safe_name = (resume["user_name"] or "unknown").replace(" ", "_")
     return FileResponse(
         resume["output_filename"],
         media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-        filename=f"tailored_resume_{resume_id}.docx"
+        filename=f"{safe_name}_resume_{resume_id}.docx"
     )
 
 
 if __name__ == "__main__":
     import uvicorn
-    PORT = 3000
-    uvicorn.run(app, host="0.0.0.0", port=PORT)
+    PORT = 5000
+    uvicorn.run(app, host="127.0.0.1", port=PORT)
