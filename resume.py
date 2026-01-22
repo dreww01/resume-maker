@@ -10,9 +10,9 @@ from dotenv import load_dotenv
 load_dotenv()
 openai_api_key = os.getenv("OPENAI_API_KEY")
 
-
+#Read resume from PDF or DOCX file.
 def read_resume(file_path):
-    """Read resume from PDF or DOCX file."""
+    
     if file_path.endswith('.pdf'):
         with open(file_path, 'rb') as file:
             pdf_reader = PyPDF2.PdfReader(file)

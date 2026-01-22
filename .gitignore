@@ -27,3 +27,7 @@ wheels/
 
 # IDE
 .vscode/
+
+implementation.md
+
+database.db
