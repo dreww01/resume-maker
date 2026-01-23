@@ -8,6 +8,7 @@ from openai import OpenAI
 from dotenv import load_dotenv
 
 from prompts.resume_tailor import SYSTEM_PROMPT, USER_PROMPT_TEMPLATE
+from prompts.cover_letter import COVER_LETTER_SYSTEM_PROMPT, COVER_LETTER_USER_TEMPLATE
 
 load_dotenv()
 openai_api_key = os.getenv("OPENAI_API_KEY")
@@ -53,6 +54,44 @@ def call_openai(resume_text, job_description):
 
     resume_data = json.loads(response.choices[0].message.content)
     return resume_data
+
+
+def call_openai_cover_letter(resume_text, job_description):
+    client = OpenAI(api_key=openai_api_key)
+
+    user_prompt = COVER_LETTER_USER_TEMPLATE.format(
+        resume_text=resume_text,
+        job_description=job_description
+    )
+
+    response = client.chat.completions.create(
+        model="gpt-4.1-nano",
+        messages=[
+            {"role": "system", "content": COVER_LETTER_SYSTEM_PROMPT},
+            {"role": "user", "content": user_prompt}
+        ],
+        response_format={"type": "json_object"}
+    )
+
+    return json.loads(response.choices[0].message.content)
+
+
+def create_cover_letter_docx(text, output_path):
+    doc = Document()
+
+    for section in doc.sections:
+        section.top_margin = Inches(1)
+        section.bottom_margin = Inches(1)
+        section.left_margin = Inches(1)
+        section.right_margin = Inches(1)
+
+    for paragraph in text.strip().split('\n\n'):
+        if paragraph.strip():
+            p = doc.add_paragraph(paragraph.strip())
+            p.paragraph_format.space_after = Pt(12)
+
+    doc.save(output_path)
+    return output_path
 
 
 def create_docx(resume_data, output_path="tailored_resume.docx"):

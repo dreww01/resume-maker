@@ -4,7 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 
 from database import create_resume, get_resume, update_resume
-from resume import read_resume, call_openai, create_docx
+from resume import read_resume, call_openai, create_docx, call_openai_cover_letter, create_cover_letter_docx
 
 app = FastAPI(title="Resume Tailor API")
 
@@ -63,6 +63,24 @@ def tailor_resume(resume_id: int, job_description: str = Body(..., media_type="t
     return {"status": "completed", "output_filename": output_path}
 
 
+@app.post("/resumes/{resume_id}/cover-letter")
+def generate_cover_letter(resume_id: int, job_description: str = Body(..., media_type="text/plain")):
+    resume = get_resume(resume_id)
+    if not resume:
+        raise HTTPException(404, "Resume not found")
+
+    resume_text = read_resume(resume["original_filename"])
+    cover_letter_data = call_openai_cover_letter(resume_text, job_description)
+
+    output_path = os.path.join(OUTPUT_DIR, f"{resume_id}_cover_letter.docx")
+    create_cover_letter_docx(cover_letter_data["content"], output_path)
+
+    user_name = cover_letter_data.get("name", "")
+    update_resume(resume_id, cover_letter_filename=output_path, user_name=user_name)
+
+    return {"status": "completed", "cover_letter_filename": output_path}
+
+
 @app.get("/resumes/{resume_id}")
 def get_resume_status(resume_id: int):
     resume = get_resume(resume_id)
@@ -88,6 +106,23 @@ def download_resume(resume_id: int):
         resume["output_filename"],
         media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
         filename=f"{safe_name}_resume_{resume_id}.docx"
+    )
+
+
+@app.get("/resumes/{resume_id}/cover-letter/download")
+def download_cover_letter(resume_id: int):
+    resume = get_resume(resume_id)
+    if not resume:
+        raise HTTPException(404, "Resume not found")
+
+    if not resume["cover_letter_filename"] or not os.path.exists(resume["cover_letter_filename"]):
+        raise HTTPException(404, "Cover letter not found")
+
+    safe_name = (resume["user_name"] or "unknown").replace(" ", "_")
+    return FileResponse(
+        resume["cover_letter_filename"],
+        media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        filename=f"{safe_name}_cover_letter_{resume_id}.docx"
     )
 
 
