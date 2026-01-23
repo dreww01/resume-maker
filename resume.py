@@ -1,11 +1,14 @@
 import os
 import json
+import base64
+import io
 import PyPDF2
 from docx import Document
 from docx.shared import Pt, Inches, RGBColor
 from docx.enum.text import WD_ALIGN_PARAGRAPH
 from openai import OpenAI
 from dotenv import load_dotenv
+import pypdfium2 as pdfium
 
 from prompts.resume_tailor import SYSTEM_PROMPT, USER_PROMPT_TEMPLATE
 from prompts.cover_letter import COVER_LETTER_SYSTEM_PROMPT, COVER_LETTER_USER_TEMPLATE
@@ -13,16 +16,45 @@ from prompts.cover_letter import COVER_LETTER_SYSTEM_PROMPT, COVER_LETTER_USER_T
 load_dotenv()
 openai_api_key = os.getenv("OPENAI_API_KEY")
 
-#Read resume from PDF or DOCX file.
+VISION_BASE_URL = os.getenv("VISION_BASE_URL", "https://api.openai.com/v1")
+VISION_MODEL = os.getenv("VISION_MODEL", "gpt-4o-mini")
+
+def extract_pdf_with_vision(file_path):
+    pdf = pdfium.PdfDocument(file_path)
+
+    image_contents = []
+    for page in pdf:
+        bitmap = page.render(scale=2)
+        pil_image = bitmap.to_pil()
+        buffer = io.BytesIO()
+        pil_image.save(buffer, format="PNG")
+        base64_image = base64.b64encode(buffer.getvalue()).decode("utf-8")
+        image_contents.append({
+            "type": "image_url",
+            "image_url": {"url": f"data:image/png;base64,{base64_image}"}
+        })
+    pdf.close()
+
+    client = OpenAI(api_key=openai_api_key, base_url=VISION_BASE_URL)
+
+    response = client.chat.completions.create(
+        model=VISION_MODEL,
+        messages=[{
+            "role": "user",
+            "content": [
+                {"type": "text", "text": "Extract ALL text from this resume image. Preserve the structure and sections. Return only the extracted text, no commentary."},
+                *image_contents
+            ]
+        }],
+        max_tokens=4000
+    )
+
+    return response.choices[0].message.content.strip()
+
+
 def read_resume(file_path):
-    
     if file_path.endswith('.pdf'):
-        with open(file_path, 'rb') as file:
-            pdf_reader = PyPDF2.PdfReader(file)
-            text = ""
-            for page in pdf_reader.pages:
-                text += page.extract_text()
-        return text.strip()
+        return extract_pdf_with_vision(file_path)
 
     elif file_path.endswith('.docx'):
         doc = Document(file_path)

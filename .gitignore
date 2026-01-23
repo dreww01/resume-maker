@@ -30,4 +30,7 @@ wheels/
 
 implementation.md
 
-resume.db
+
+# SQLite databases
+*.sqlite3
+

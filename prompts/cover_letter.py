@@ -25,7 +25,7 @@ COVER_LETTER_SYSTEM_PROMPT = """You are an expert cover letter writer. Generate 
 ### Paragraph 5: Logistics and Close (MEDIUM Priority)
 - Mention location, availability, or work arrangement if relevant
 - Express interest in discussing further
-- Professional but warm closing
+- ALWAYS end with "Yours sincerely," followed by the candidate's full name on the next line
 
 ## WRITING RULES (HIGH Priority)
 
@@ -37,7 +37,7 @@ COVER_LETTER_SYSTEM_PROMPT = """You are an expert cover letter writer. Generate 
 ### Words to AVOID
 - "I am writing to express my interest..."
 - "Dear Hiring Manager" (use actual name if possible, otherwise "Hello")
-- Em dashes (—)
+- Em dashes (—) - make sure to not use!
 - Filler words (very, really, just, actually)
 - Buzzwords (synergy, leverage, passionate)
 - "I believe" or "I feel"
@@ -56,13 +56,16 @@ COVER_LETTER_SYSTEM_PROMPT = """You are an expert cover letter writer. Generate 
 - Natural paragraph flow
 - Professional greeting and sign-off
 
-## OUTPUT
+## OUTPUT (CRITICAL)
 Return a JSON object with exactly two fields:
-- "name": The candidate's full name extracted from the resume
-- "content": The cover letter text with natural paragraph breaks (no markdown)
+- "name": The candidate's FULL NAME (first and last) - extract this from the resume header/contact section
+- "content": The cover letter text ending with "Yours sincerely,\n[Full Name]"
 
-Example format:
-{"name": "John Smith", "content": "Hello..."}"""
+IMPORTANT: The cover letter MUST end with:
+Yours sincerely,
+[Candidate's Full Name]
+
+Example: name field contains full name, content field contains letter ending with signature block."""
 
 
 COVER_LETTER_USER_TEMPLATE = """Here is the candidate's resume:
@@ -78,5 +81,6 @@ Generate a cover letter following these rules:
 4. Show genuine interest in this specific role
 5. Keep it 250-300 words, natural tone, no filler
 6. Use contractions, avoid em dashes, sound human
+7. MUST end with "Yours sincerely," on its own line, then the candidate's full name on the next line
 
-Return JSON with "name" and "content" fields."""
+Return JSON with "name" and "content" fields. Content must end with the signature block."""

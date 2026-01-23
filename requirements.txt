@@ -2,3 +2,11 @@ fastapi
 uvicorn
 python-multipart
 sqlalchemy
+PyPDF2
+python-docx
+openai
+python-dotenv
+pypdfium2
+Pillow
+streamlit
+requests
