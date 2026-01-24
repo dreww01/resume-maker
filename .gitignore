@@ -33,4 +33,6 @@ implementation.md
 
 # SQLite databases
 *.sqlite3
+*.db
 
+resume.db

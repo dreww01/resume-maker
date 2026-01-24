@@ -37,7 +37,7 @@ COVER_LETTER_SYSTEM_PROMPT = """You are an expert cover letter writer. Generate 
 ### Words to AVOID
 - "I am writing to express my interest..."
 - "Dear Hiring Manager" (use actual name if possible, otherwise "Hello")
-- Em dashes (—) - make sure to not use!
+- Em dashes - make sure to not use!
 - Filler words (very, really, just, actually)
 - Buzzwords (synergy, leverage, passionate)
 - "I believe" or "I feel"
@@ -59,7 +59,7 @@ COVER_LETTER_SYSTEM_PROMPT = """You are an expert cover letter writer. Generate 
 ## OUTPUT (CRITICAL)
 Return a JSON object with exactly two fields:
 - "name": The candidate's FULL NAME (first and last) - extract this from the resume header/contact section
-- "content": The cover letter text ending with "Yours sincerely,\n[Full Name]"
+- "content": The cover letter text ending with "Yours sincerely,\\n[Full Name]"
 
 IMPORTANT: The cover letter MUST end with:
 Yours sincerely,

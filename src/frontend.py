@@ -5,9 +5,9 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-API_URL = os.getenv("API_URL") or "http://127.0.0.1:5000"
+API_URL = os.getenv("API_URL", "http://127.0.0.1:8000")
 
-st.set_page_config(page_title="Resume Tailor", page_icon="📄", layout="centered")
+st.set_page_config(page_title="Resume Tailor", page_icon="", layout="centered")
 st.title("Resume Tailor & Cover Letter Generator")
 
 if "resume_id" not in st.session_state:
@@ -15,7 +15,6 @@ if "resume_id" not in st.session_state:
 if "status" not in st.session_state:
     st.session_state.status = None
 
-# file upload
 uploaded_file = st.file_uploader("Upload your resume", type=["pdf", "docx"])
 
 if uploaded_file and st.session_state.resume_id is None:
@@ -31,7 +30,7 @@ if uploaded_file and st.session_state.resume_id is None:
             st.error("Upload failed. Ensure file is PDF or DOCX.")
 
 if st.session_state.resume_id:
-    st.info(f"Resume ID: {st.session_state.resume_id} | Status: {st.session_state.status}")
+    st.info(f"Status: {st.session_state.status}")
 
 job_description = st.text_area("Paste the job description", height=200)
 
