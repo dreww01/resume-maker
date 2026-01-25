@@ -1,3 +1,12 @@
+---
+title: Resume Maker
+emoji: 📄
+colorFrom: blue
+colorTo: purple
+sdk: docker
+pinned: false
+---
+
 # Resume Tailor
 
 AI-powered resume tailoring and cover letter generation tool. Upload your resume, paste a job description, and get an ATS-optimized resume tailored to the specific role.
