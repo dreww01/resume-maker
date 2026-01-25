@@ -1,0 +1,8 @@
+# HF Spaces runs behind a reverse proxy which breaks Streamlit's XSRF cookie
+# (_xsrf cookie missing SameSite/Secure attributes → browser blocks it → 403 on file upload)
+# disabling XSRF + CORS fixes file_uploader and iframe embedding on HF Spaces
+
+[server]
+enableXsrfProtection = false
+enableCORS = false
+maxUploadSize = 50
