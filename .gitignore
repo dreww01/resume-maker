@@ -25,6 +25,9 @@ wheels/
 # Claude folder
 .claude/
 
+# Testing & Caches
+.pytest_cache/
+
 # IDE
 .vscode/
 

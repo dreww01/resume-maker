@@ -160,13 +160,21 @@ This project is configured for Hugging Face Spaces:
 
 The app will be available on port 7860.
 
-## Contributing
+## Architecture & Contributing
 
-1. Fork the repository
-2. Create a feature branch: `git checkout -b feature/your-feature`
-3. Commit changes: `git commit -m "feat: add your feature"`
-4. Push to branch: `git push origin feature/your-feature`
-5. Open a Pull Request
+For full details on system architecture, development setup, branch conventions, and testing guidelines, please see the [Contributing Guide](docs/CONTRIBUTING.md).
+
+### Quick Reference
+
+- **Branch Naming**: `dsh/<issue-id>` (e.g., `dsh/ORC-6`)
+- **Commit Style**: [Conventional Commits](https://www.conventionalcommits.org/) (`feat:`, `fix:`, `docs:`, `test:`, etc.)
+- **Testing**: `uv run pytest -v`
+- **Core Components**:
+  - `src/api.py` - FastAPI REST backend endpoints
+  - `src/frontend.py` - Streamlit web user interface
+  - `src/resume_processor.py` - Document parsing, OpenAI integration, DOCX generation
+  - `src/database.py` - SQLAlchemy ORM persistence layer
+  - `src/prompts/` - Prompt templates for tailoring and cover letters
 
 ## License
 
