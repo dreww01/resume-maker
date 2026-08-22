@@ -32,10 +32,6 @@ def _make_module_stub(name: str, **attrs) -> ModuleType:
     Any attribute not explicitly provided via *attrs* is a fresh MagicMock,
     so ``from stub_module import anything`` always succeeds.
     """
-    mod = ModuleType(name)
-    for k, v in attrs.items():
-        setattr(mod, k, v)
-
     _fallback = mock.MagicMock()
 
     class _AutoAttrModule(ModuleType):
