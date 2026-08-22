@@ -102,7 +102,7 @@ def call_openai(resume_text: str, job_description: str) -> dict:
 
 
 def call_openai_cover_letter(resume_text: str, job_description: str) -> dict:
-    client = OpenAI(api_key=OPENAI_API_KEY)
+    client = _get_openai_client()
     user_prompt = COVER_LETTER_USER_TEMPLATE.format(
         resume_text=resume_text,
         job_description=job_description
