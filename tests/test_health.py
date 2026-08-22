@@ -1,6 +1,6 @@
-"""Unit and regression tests for the API endpoints."""
+"""Unit tests for the /api/health endpoint."""
 
-from datetime import datetime
+from datetime import datetime, timezone
 from fastapi.testclient import TestClient
 import pytest
 
@@ -13,33 +13,34 @@ def client():
 
 
 def test_health_check_status_code(client):
-    """Test that /api/health returns HTTP 200 OK."""
+    """Test that GET /api/health returns HTTP 200 OK."""
     response = client.get("/api/health")
     assert response.status_code == 200
 
 
 def test_health_check_payload_structure(client):
-    """Test that /api/health returns valid JSON with expected keys and types."""
+    """Test that /api/health returns valid JSON with exact expected schema."""
     response = client.get("/api/health")
     assert response.headers["content-type"] == "application/json"
-    
+
     data = response.json()
-    assert "status" in data
-    assert "timestamp" in data
-    assert "version" in data
-    
+    assert isinstance(data, dict)
+    assert set(data.keys()) == {"status", "timestamp", "version"}
     assert data["status"] == "healthy"
     assert data["version"] == "1.0.0"
 
 
-def test_health_check_timestamp_format(client):
-    """Test that /api/health returns a valid ISO-8601 UTC timestamp."""
+def test_health_check_timestamp_validity(client):
+    """Test that /api/health returns a valid ISO-8601 UTC timestamp reflecting current time."""
+    before = datetime.now(timezone.utc)
     response = client.get("/api/health")
+    after = datetime.now(timezone.utc)
+
+    assert response.status_code == 200
     data = response.json()
-    
+
     timestamp_str = data["timestamp"]
-    # Verify it can be parsed as ISO-8601 datetime
     parsed_dt = datetime.fromisoformat(timestamp_str)
-    assert parsed_dt is not None
-    # Verify it includes UTC timezone offset info (+00:00 or Z)
+
     assert parsed_dt.tzinfo is not None
+    assert before <= parsed_dt <= after
