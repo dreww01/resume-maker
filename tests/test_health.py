@@ -90,33 +90,32 @@ class TestHealthEndpointHttpSemantics:
 class TestHealthEndpointPayload:
     """Verify the JSON payload shape and field values."""
 
-    @pytest.fixture(autouse=True)
-    def _response(self, client: TestClient) -> None:
-        self._resp = client.get("/health")
-        self._body = self._resp.json()
+    @pytest.fixture
+    def body(self, client: TestClient) -> dict:
+        return client.get("/health").json()
 
-    def test_payload_has_status_field(self) -> None:
-        assert "status" in self._body, "Response missing 'status' field"
+    def test_payload_has_status_field(self, body: dict) -> None:
+        assert "status" in body, "Response missing 'status' field"
 
-    def test_payload_has_timestamp_field(self) -> None:
-        assert "timestamp" in self._body, "Response missing 'timestamp' field"
+    def test_payload_has_timestamp_field(self, body: dict) -> None:
+        assert "timestamp" in body, "Response missing 'timestamp' field"
 
-    def test_payload_has_version_field(self) -> None:
-        assert "version" in self._body, "Response missing 'version' field"
+    def test_payload_has_version_field(self, body: dict) -> None:
+        assert "version" in body, "Response missing 'version' field"
 
-    def test_payload_has_exactly_three_fields(self) -> None:
+    def test_payload_has_exactly_three_fields(self, body: dict) -> None:
         """No extra undocumented fields should leak into the response."""
-        assert set(self._body.keys()) == {"status", "timestamp", "version"}
+        assert set(body.keys()) == {"status", "timestamp", "version"}
 
-    def test_status_value_is_healthy(self) -> None:
-        assert self._body["status"] == "healthy"
+    def test_status_value_is_healthy(self, body: dict) -> None:
+        assert body["status"] == "healthy"
 
-    def test_version_value_matches_app_constant(self) -> None:
+    def test_version_value_matches_app_constant(self, body: dict) -> None:
         from src.api import _APP_VERSION
-        assert self._body["version"] == _APP_VERSION
+        assert body["version"] == _APP_VERSION
 
-    def test_timestamp_is_iso8601_utc(self) -> None:
-        _assert_utc_timestamp(self._body["timestamp"])
+    def test_timestamp_is_iso8601_utc(self, body: dict) -> None:
+        _assert_utc_timestamp(body["timestamp"])
 
 
 class TestHealthEndpointTimestamp:
