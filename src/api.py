@@ -1,12 +1,26 @@
-from fastapi import FastAPI, UploadFile, File, HTTPException, Body
+from fastapi import FastAPI, UploadFile, File, HTTPException, Body, Request, Depends, Header
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import Response
 
 from src.database import create_resume, get_resume, update_resume
 from src.resume_processor import read_resume, call_openai, create_docx, call_openai_cover_letter, create_cover_letter_docx
+from src.security import (
+    RequestSizeLimitMiddleware,
+    SecurityHeadersMiddleware,
+    rate_limit_dependency,
+    verify_linear_hmac,
+    verify_github_hmac,
+    rate_limiter,
+)
 
 app = FastAPI(title="Resume Tailor API")
 
+# Middlewares are executed in reverse order of addition in Starlette/FastAPI:
+# 1. RequestSizeLimitMiddleware (rejects large payloads before processing)
+# 2. SecurityHeadersMiddleware (outermost for response headers, ensuring headers are set even on errors)
+# 3. CORSMiddleware
+app.add_middleware(RequestSizeLimitMiddleware)
+app.add_middleware(SecurityHeadersMiddleware)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -14,6 +28,34 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+@app.post("/webhook/linear", dependencies=[Depends(rate_limit_dependency)])
+async def linear_webhook(
+    request: Request,
+    linear_signature: str | None = Header(None, alias="Linear-Signature")
+):
+    body = await request.body()
+    if not verify_linear_hmac(linear_signature, body):
+        raise HTTPException(status_code=401, detail="Invalid signature")
+    return {"status": "ok"}
+
+
+@app.post("/webhook/github", dependencies=[Depends(rate_limit_dependency)])
+async def github_webhook(
+    request: Request,
+    x_hub_signature_256: str | None = Header(None, alias="X-Hub-Signature-256")
+):
+    body = await request.body()
+    if not verify_github_hmac(x_hub_signature_256, body):
+        raise HTTPException(status_code=401, detail="Invalid signature")
+    return {"status": "ok"}
+
+
+@app.post("/api/thinking", dependencies=[Depends(rate_limit_dependency)])
+@app.get("/api/thinking", dependencies=[Depends(rate_limit_dependency)])
+async def thinking():
+    return {"status": "thinking"}
 
 
 @app.get("/")
