@@ -131,30 +131,30 @@ def rate_limit_dependency(request: Request):
         )
 
 
-LINEAR_WEBHOOK_SECRET = os.getenv("LINEAR_WEBHOOK_SECRET", "linear-default-secret")
-GITHUB_WEBHOOK_SECRET = os.getenv("GITHUB_WEBHOOK_SECRET", "github-default-secret")
-
-
-def verify_linear_hmac(signature: str | None, payload: bytes, secret: str = LINEAR_WEBHOOK_SECRET) -> bool:
+def verify_linear_hmac(signature: str | None, payload: bytes, secret: str | None = None) -> bool:
     """
     Validates Linear-Signature header using constant-time comparison (HMAC-SHA256).
-    Defensive against missing or malformed headers.
+    Defensive against missing or malformed headers and missing secret.
     """
-    expected_sig = hmac.new(secret.encode("utf-8"), payload, hashlib.sha256).hexdigest()
+    webhook_secret = secret or os.getenv("LINEAR_WEBHOOK_SECRET")
+    if not webhook_secret:
+        return False
+    expected_sig = hmac.new(webhook_secret.encode("utf-8"), payload, hashlib.sha256).hexdigest()
     if not signature or not isinstance(signature, str):
-        hmac.compare_digest(expected_sig, expected_sig)
         return False
     return hmac.compare_digest(expected_sig, signature.strip())
 
 
-def verify_github_hmac(signature: str | None, payload: bytes, secret: str = GITHUB_WEBHOOK_SECRET) -> bool:
+def verify_github_hmac(signature: str | None, payload: bytes, secret: str | None = None) -> bool:
     """
     Validates X-Hub-Signature-256 header using constant-time comparison (HMAC-SHA256 with sha256= prefix).
-    Defensive against missing or malformed headers.
+    Defensive against missing or malformed headers and missing secret.
     """
-    expected_hex = hmac.new(secret.encode("utf-8"), payload, hashlib.sha256).hexdigest()
+    webhook_secret = secret or os.getenv("GITHUB_WEBHOOK_SECRET")
+    if not webhook_secret:
+        return False
+    expected_hex = hmac.new(webhook_secret.encode("utf-8"), payload, hashlib.sha256).hexdigest()
     expected_sig = f"sha256={expected_hex}"
     if not signature or not isinstance(signature, str):
-        hmac.compare_digest(expected_sig, expected_sig)
         return False
     return hmac.compare_digest(expected_sig, signature.strip())

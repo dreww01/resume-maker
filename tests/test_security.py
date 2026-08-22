@@ -1,15 +1,19 @@
+import os
 import hmac
 import hashlib
 import pytest
 from fastapi.testclient import TestClient
+
+LINEAR_WEBHOOK_SECRET = "test-linear-secret"
+GITHUB_WEBHOOK_SECRET = "test-github-secret"
+os.environ["LINEAR_WEBHOOK_SECRET"] = LINEAR_WEBHOOK_SECRET
+os.environ["GITHUB_WEBHOOK_SECRET"] = GITHUB_WEBHOOK_SECRET
 
 from src.api import app
 from src.security import (
     rate_limiter,
     verify_linear_hmac,
     verify_github_hmac,
-    LINEAR_WEBHOOK_SECRET,
-    GITHUB_WEBHOOK_SECRET,
 )
 
 
@@ -146,6 +150,17 @@ def test_hmac_timing_safe_function():
     # Wrong format
     assert not verify_linear_hmac("123", payload)
     assert not verify_github_hmac("123", payload)
+    # Missing secret with env unset
+    old_linear = os.environ.pop("LINEAR_WEBHOOK_SECRET", None)
+    old_github = os.environ.pop("GITHUB_WEBHOOK_SECRET", None)
+    try:
+        assert not verify_linear_hmac("some_sig", payload)
+        assert not verify_github_hmac("sha256=some_sig", payload)
+    finally:
+        if old_linear:
+            os.environ["LINEAR_WEBHOOK_SECRET"] = old_linear
+        if old_github:
+            os.environ["GITHUB_WEBHOOK_SECRET"] = old_github
 
 
 def test_security_headers_present():
