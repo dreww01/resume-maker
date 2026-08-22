@@ -115,13 +115,6 @@ class TestHealthEndpointPayload:
         from src.api import _APP_VERSION
         assert self._body["version"] == _APP_VERSION
 
-    def test_version_matches_package_metadata(self) -> None:
-        """Regression: version in the health payload must equal _APP_VERSION,
-        which is sourced from the installed package metadata (pyproject.toml).
-        """
-        from src.api import _APP_VERSION
-        assert self._body["version"] == _APP_VERSION
-
     def test_timestamp_is_iso8601_utc(self) -> None:
         _assert_utc_timestamp(self._body["timestamp"])
 
