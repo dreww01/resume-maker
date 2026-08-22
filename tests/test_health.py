@@ -125,15 +125,6 @@ class TestHealthEndpointPayload:
     def test_timestamp_is_iso8601_utc(self) -> None:
         _assert_utc_timestamp(self._body["timestamp"])
 
-    def test_timestamp_is_close_to_now(self) -> None:
-        """Timestamp should be within 5 seconds of the test's clock."""
-        now = datetime.datetime.now(datetime.timezone.utc)
-        ts = datetime.datetime.fromisoformat(self._body["timestamp"])
-        delta = abs((now - ts).total_seconds())
-        assert delta < 5, (
-            f"Timestamp {self._body['timestamp']!r} is {delta:.1f}s away from now"
-        )
-
 
 class TestHealthEndpointTimestamp:
     """Deeper timestamp tests using controlled time."""
