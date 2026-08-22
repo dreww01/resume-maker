@@ -14,73 +14,10 @@ python-multipart) so that no real I/O occurs.  They exercise:
 
 import datetime
 import re
-import sys
-from types import ModuleType
 from unittest import mock
 
 import pytest
-
-# ---------------------------------------------------------------------------
-# Pre-import mocking: stub out all heavy / unavailable dependencies BEFORE
-# the application module is imported so the test process needs no external
-# services, credentials, or optional C-extensions.
-# ---------------------------------------------------------------------------
-
-def _make_module_stub(name: str, **attrs) -> ModuleType:
-    """Return a minimal module stub with permissive attribute access.
-
-    Any attribute not explicitly provided via *attrs* is a fresh MagicMock,
-    so ``from stub_module import anything`` always succeeds.
-    """
-    _fallback = mock.MagicMock()
-
-    class _AutoAttrModule(ModuleType):
-        def __getattr__(self, item: str):  # type: ignore[override]
-            if item.startswith("__"):
-                raise AttributeError(item)
-            return getattr(_fallback, item)
-
-    proxy = _AutoAttrModule(name)
-    for k, v in attrs.items():
-        setattr(proxy, k, v)
-    return proxy
-
-
-# python-multipart — FastAPI's ensure_multipart_is_installed() imports
-# python_multipart.__version__ and asserts it is > "0.0.12".
-# Starlette also tries ``from python_multipart.multipart import
-# parse_options_header``.  Both paths must succeed.
-_pm_version = "0.0.20"  # satisfies the > "0.0.12" assertion
-
-_pm_multipart_stub = _make_module_stub(
-    "python_multipart.multipart",
-    parse_options_header=mock.MagicMock(),
-)
-_pm_stub = _make_module_stub(
-    "python_multipart",
-    __version__=_pm_version,
-    multipart=_pm_multipart_stub,
-)
-
-for _mod_name, _stub in [
-    ("python_multipart", _pm_stub),
-    ("python_multipart.multipart", _pm_multipart_stub),
-    ("multipart", _make_module_stub("multipart", __version__=_pm_version)),
-    ("multipart.multipart", _make_module_stub(
-        "multipart.multipart",
-        parse_options_header=mock.MagicMock(),
-    )),
-]:
-    sys.modules.setdefault(_mod_name, _stub)
-
-# Application-internal modules with real I/O.
-sys.modules.setdefault("src.database", _make_module_stub("src.database"))
-sys.modules.setdefault("src.resume_processor", _make_module_stub("src.resume_processor"))
-
-# Now safe to import the FastAPI app.
-from src.api import _APP_VERSION, app  # noqa: E402  (intentional late import)
-
-from fastapi.testclient import TestClient  # noqa: E402
+from fastapi.testclient import TestClient
 
 
 # ---------------------------------------------------------------------------
@@ -90,6 +27,7 @@ from fastapi.testclient import TestClient  # noqa: E402
 @pytest.fixture(scope="module")
 def client() -> TestClient:
     """Return a synchronous TestClient wrapping the FastAPI application."""
+    from src.api import app
     return TestClient(app)
 
 
@@ -174,12 +112,14 @@ class TestHealthEndpointPayload:
         assert self._body["status"] == "healthy"
 
     def test_version_value_matches_app_constant(self) -> None:
+        from src.api import _APP_VERSION
         assert self._body["version"] == _APP_VERSION
 
     def test_version_matches_package_metadata(self) -> None:
         """Regression: version in the health payload must equal _APP_VERSION,
         which is sourced from the installed package metadata (pyproject.toml).
         """
+        from src.api import _APP_VERSION
         assert self._body["version"] == _APP_VERSION
 
     def test_timestamp_is_iso8601_utc(self) -> None:
@@ -248,6 +188,7 @@ class TestHealthEndpointRegression:
 
     def test_endpoint_is_idempotent(self, client: TestClient) -> None:
         """Multiple GET requests all succeed with the same shape."""
+        from src.api import _APP_VERSION
         for _ in range(5):
             response = client.get("/health")
             assert response.status_code == 200
