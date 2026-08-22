@@ -1,11 +1,21 @@
+from datetime import datetime, timezone
 from fastapi import FastAPI, UploadFile, File, HTTPException, Body
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import Response
+from pydantic import BaseModel
 
 from src.database import create_resume, get_resume, update_resume
 from src.resume_processor import read_resume, call_openai, create_docx, call_openai_cover_letter, create_cover_letter_docx
 
-app = FastAPI(title="Resume Tailor API")
+app = FastAPI(title="Resume Tailor API", version="1.0.0")
+
+
+class HealthResponse(BaseModel):
+    """Health check response payload schema."""
+    status: str
+    timestamp: str
+    version: str
+
 
 app.add_middleware(
     CORSMiddleware,
@@ -19,6 +29,16 @@ app.add_middleware(
 @app.get("/")
 async def root():
     return {"message": "Welcome to Resume Tailor API, Go to /docs to get started"}
+
+
+@app.get("/api/health", response_model=HealthResponse)
+async def health_check() -> HealthResponse:
+    """Return hermetic health and readiness status."""
+    return HealthResponse(
+        status="healthy",
+        timestamp=datetime.now(timezone.utc).isoformat(),
+        version="1.0.0",
+    )
 
 
 @app.post("/upload")
