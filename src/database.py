@@ -2,6 +2,7 @@ import os
 import logging
 from sqlalchemy.orm import sessionmaker, declarative_base
 from sqlalchemy import create_engine, Column, Integer, String, DateTime, LargeBinary
+from sqlalchemy.pool import StaticPool
 from sqlalchemy.exc import SQLAlchemyError
 from datetime import datetime
 from contextlib import contextmanager
@@ -13,7 +14,16 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///:memory:")
-engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
+if DATABASE_URL.startswith("sqlite:///:memory:") or DATABASE_URL == "sqlite://":
+    engine = create_engine(
+        DATABASE_URL,
+        connect_args={"check_same_thread": False},
+        poolclass=StaticPool,
+    )
+elif "sqlite" in DATABASE_URL:
+    engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
+else:
+    engine = create_engine(DATABASE_URL)
 
 Base = declarative_base()
 
