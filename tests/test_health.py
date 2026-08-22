@@ -38,7 +38,7 @@ def client() -> TestClient:
 _ISO8601_UTC_RE = re.compile(
     r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}"  # date and time
     r"(\.\d+)?"                                 # optional microseconds
-    r"(\+00:00|Z)$"                             # UTC offset
+    r"\+00:00$"                                 # UTC offset (Python isoformat)
 )
 
 
