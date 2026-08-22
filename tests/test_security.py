@@ -73,6 +73,18 @@ def test_rate_limiting_burst():
             assert res.json()["detail"] == "Too Many Requests"
 
 
+def test_rate_limiting_x_forwarded_for_spoofing():
+    """Spoofed X-Forwarded-For header does not bypass rate limiter."""
+    rate_limiter.reset()
+    for i in range(60):
+        res = client.get("/api/thinking", headers={"X-Forwarded-For": f"1.1.1.{i}"})
+        assert res.status_code == 200
+
+    # 61st request with a new spoofed IP is still rate limited by direct client IP
+    res = client.get("/api/thinking", headers={"X-Forwarded-For": "9.9.9.9"})
+    assert res.status_code == 429
+
+
 def test_hmac_valid_and_invalid_linear():
     """Valid and invalid HMAC signatures for Linear webhook."""
     payload = b'{"action": "issue.create"}'

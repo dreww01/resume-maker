@@ -119,11 +119,8 @@ rate_limiter = TokenBucketRateLimiter(rate=60.0, capacity=60.0, per_seconds=60.0
 
 
 def rate_limit_dependency(request: Request):
+    # Only trust X-Forwarded-For if behind a verified trusted reverse proxy; otherwise rely on direct client host
     client_ip = request.client.host if request.client else "127.0.0.1"
-    forwarded = request.headers.get("x-forwarded-for")
-    if forwarded:
-        client_ip = forwarded.split(",")[0].strip()
-
     if not rate_limiter.is_allowed(client_ip):
         raise HTTPException(
             status_code=status.HTTP_429_TOO_MANY_REQUESTS,
