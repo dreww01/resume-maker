@@ -1,3 +1,5 @@
+import datetime
+
 from fastapi import FastAPI, UploadFile, File, HTTPException, Body
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import Response
@@ -6,6 +8,9 @@ from src.database import create_resume, get_resume, update_resume
 from src.resume_processor import read_resume, call_openai, create_docx, call_openai_cover_letter, create_cover_letter_docx
 
 app = FastAPI(title="Resume Tailor API")
+
+# Application version, kept in a single authoritative location.
+_APP_VERSION = "1.0.0"
 
 app.add_middleware(
     CORSMiddleware,
@@ -19,6 +24,33 @@ app.add_middleware(
 @app.get("/")
 async def root():
     return {"message": "Welcome to Resume Tailor API, Go to /docs to get started"}
+
+
+@app.get("/api/health")
+async def health_check():
+    """Return a lightweight health-check payload.
+
+    The endpoint is hermetic — it performs no I/O and never returns a
+    non-200 status under normal operating conditions.  Callers can rely
+    on the shape of the response remaining stable across patch releases.
+
+    Returns:
+        A JSON object with the keys ``status``, ``timestamp``, and
+        ``version``.
+
+    Example response::
+
+        {
+            "status": "healthy",
+            "timestamp": "2024-01-15T12:34:56.789012Z",
+            "version": "1.0.0"
+        }
+    """
+    return {
+        "status": "healthy",
+        "timestamp": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+        "version": _APP_VERSION,
+    }
 
 
 @app.post("/upload")
