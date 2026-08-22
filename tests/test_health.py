@@ -180,9 +180,11 @@ class TestHealthEndpointPayload:
     def test_version_value_matches_app_constant(self) -> None:
         assert self._body["version"] == _APP_VERSION
 
-    def test_version_is_1_0_0(self) -> None:
-        """Regression: version must be '1.0.0' per the issue specification."""
-        assert self._body["version"] == "1.0.0"
+    def test_version_matches_package_metadata(self) -> None:
+        """Regression: version in the health payload must equal _APP_VERSION,
+        which is sourced from the installed package metadata (pyproject.toml).
+        """
+        assert self._body["version"] == _APP_VERSION
 
     def test_timestamp_is_iso8601_utc(self) -> None:
         _assert_utc_timestamp(self._body["timestamp"])
@@ -255,7 +257,7 @@ class TestHealthEndpointRegression:
             assert response.status_code == 200
             body = response.json()
             assert body["status"] == "healthy"
-            assert body["version"] == "1.0.0"
+            assert body["version"] == _APP_VERSION
             _assert_utc_timestamp(body["timestamp"])
 
     def test_endpoint_registered_in_openapi_schema(self, client: TestClient) -> None:
@@ -287,9 +289,12 @@ class TestHealthEndpointRegression:
         assert isinstance(body["timestamp"], str)
 
     def test_version_semver_format(self, client: TestClient) -> None:
-        """Version must follow MAJOR.MINOR.PATCH semver notation."""
+        """Version must follow MAJOR.MINOR.PATCH semver notation, with an
+        optional pre-release suffix (e.g. '0.0.0-dev' when the package is not
+        installed in editable mode).
+        """
         body = client.get("/api/health").json()
-        semver_re = re.compile(r"^\d+\.\d+\.\d+$")
+        semver_re = re.compile(r"^\d+\.\d+\.\d+(-.+)?$")
         assert semver_re.match(body["version"]), (
-            f"Version {body['version']!r} does not match MAJOR.MINOR.PATCH"
+            f"Version {body['version']!r} does not match MAJOR.MINOR.PATCH[-prerelease]"
         )

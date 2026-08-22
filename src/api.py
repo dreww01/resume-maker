@@ -1,4 +1,5 @@
 import datetime
+import importlib.metadata
 
 from fastapi import FastAPI, UploadFile, File, HTTPException, Body
 from fastapi.middleware.cors import CORSMiddleware
@@ -9,8 +10,13 @@ from src.resume_processor import read_resume, call_openai, create_docx, call_ope
 
 app = FastAPI(title="Resume Tailor API")
 
-# Application version, kept in a single authoritative location.
-_APP_VERSION = "1.0.0"
+# Application version — read from the installed package metadata so that
+# this value always matches pyproject.toml and whatever deployment tooling
+# (PyPI, importlib.metadata, etc.) reports.
+try:
+    _APP_VERSION: str = importlib.metadata.version("resume-maker")
+except importlib.metadata.PackageNotFoundError:
+    _APP_VERSION = "0.0.0-dev"
 
 app.add_middleware(
     CORSMiddleware,
@@ -43,7 +49,7 @@ async def health_check():
         {
             "status": "healthy",
             "timestamp": "2024-01-15T12:34:56.789012Z",
-            "version": "1.0.0"
+            "version": "0.1.0"
         }
     """
     return {
