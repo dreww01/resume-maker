@@ -51,7 +51,6 @@ def extract_pdf_with_vision(file_bytes: bytes) -> str:
     finally:
         os.unlink(tmp_path)
 
-    client = _get_openai_client()
     response = client.chat.completions.create(
         model=VISION_MODEL,
         messages=[{
