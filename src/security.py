@@ -25,6 +25,7 @@ class RequestSizeLimitMiddleware:
             status_code=413,
             content={"detail": "Payload Too Large"},
             headers={
+                "Access-Control-Allow-Origin": "*",
                 "X-Content-Type-Options": "nosniff",
                 "X-Frame-Options": "DENY",
                 "Strict-Transport-Security": "max-age=31536000; includeSubDomains"

@@ -15,12 +15,10 @@ from src.security import (
 
 app = FastAPI(title="Resume Tailor API")
 
-# Middlewares are executed in reverse order of addition in Starlette/FastAPI:
-# 1. RequestSizeLimitMiddleware (rejects large payloads before processing)
-# 2. SecurityHeadersMiddleware (outermost for response headers, ensuring headers are set even on errors)
-# 3. CORSMiddleware
-app.add_middleware(RequestSizeLimitMiddleware)
-app.add_middleware(SecurityHeadersMiddleware)
+# Middlewares are wrapped in reverse order of addition:
+# 1. CORSMiddleware (outermost so CORS headers are attached to all responses, including errors and 413s)
+# 2. SecurityHeadersMiddleware (attaches security headers to responses)
+# 3. RequestSizeLimitMiddleware (rejects large payloads before processing)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -28,6 +26,8 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+app.add_middleware(SecurityHeadersMiddleware)
+app.add_middleware(RequestSizeLimitMiddleware)
 
 
 @app.post("/webhook/linear", dependencies=[Depends(rate_limit_dependency)])

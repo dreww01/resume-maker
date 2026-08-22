@@ -203,3 +203,17 @@ def test_security_headers_present():
     assert res.headers.get("X-Content-Type-Options") == "nosniff"
     assert res.headers.get("X-Frame-Options") == "DENY"
     assert res.headers.get("Strict-Transport-Security") == "max-age=31536000; includeSubDomains"
+
+
+def test_cors_headers_on_413():
+    """CORS headers are attached to 413 responses from RequestSizeLimitMiddleware."""
+    res = client.post(
+        "/",
+        content=b"x",
+        headers={
+            "Content-Length": str(10 * 1024 * 1024),
+            "Origin": "http://example.com"
+        }
+    )
+    assert res.status_code == 413
+    assert res.headers.get("access-control-allow-origin") == "*"
