@@ -19,11 +19,16 @@ OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 AI_MODEL = os.getenv("AI_MODEL", "gpt-4o-mini")
 VISION_MODEL = os.getenv("VISION_MODEL", "gpt-4o-mini")
 
-if not OPENAI_API_KEY:
-    raise ValueError("OPENAI_API_KEY is not set. Add it to your .env file.")
+
+def _get_openai_api_key() -> str:
+    api_key = os.getenv("OPENAI_API_KEY") or OPENAI_API_KEY
+    if not api_key:
+        raise ValueError("OPENAI_API_KEY is not set. Add it to your .env file.")
+    return api_key
 
 
 def extract_pdf_with_vision(file_bytes: bytes) -> str:
+    api_key = _get_openai_api_key()
     with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False) as tmp:
         tmp.write(file_bytes)
         tmp_path = tmp.name
@@ -46,7 +51,7 @@ def extract_pdf_with_vision(file_bytes: bytes) -> str:
     finally:
         os.unlink(tmp_path)
 
-    client = OpenAI(api_key=OPENAI_API_KEY)
+    client = OpenAI(api_key=api_key)
     response = client.chat.completions.create(
         model=VISION_MODEL,
         messages=[{
@@ -78,7 +83,8 @@ def read_resume(file_bytes: bytes, filename: str) -> str:
 
 
 def call_openai(resume_text: str, job_description: str) -> dict:
-    client = OpenAI(api_key=OPENAI_API_KEY)
+    api_key = _get_openai_api_key()
+    client = OpenAI(api_key=api_key)
     user_prompt = USER_PROMPT_TEMPLATE.format(
         resume_text=resume_text,
         job_description=job_description
@@ -97,7 +103,8 @@ def call_openai(resume_text: str, job_description: str) -> dict:
 
 
 def call_openai_cover_letter(resume_text: str, job_description: str) -> dict:
-    client = OpenAI(api_key=OPENAI_API_KEY)
+    api_key = _get_openai_api_key()
+    client = OpenAI(api_key=api_key)
     user_prompt = COVER_LETTER_USER_TEMPLATE.format(
         resume_text=resume_text,
         job_description=job_description
