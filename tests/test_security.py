@@ -175,6 +175,19 @@ def test_hmac_timing_safe_function():
             os.environ["GITHUB_WEBHOOK_SECRET"] = old_github
 
 
+def test_token_bucket_max_keys_eviction():
+    """TokenBucketRateLimiter evicts stale keys or clears when reaching max_keys."""
+    from src.security import TokenBucketRateLimiter
+    limiter = TokenBucketRateLimiter(rate=60.0, capacity=60.0, per_seconds=60.0, max_keys=3)
+    assert limiter.is_allowed("1.1.1.1")
+    assert limiter.is_allowed("1.1.1.2")
+    assert limiter.is_allowed("1.1.1.3")
+    assert len(limiter.buckets) == 3
+    # Adding a 4th key when none are stale clears/evicts to bound memory
+    assert limiter.is_allowed("1.1.1.4")
+    assert len(limiter.buckets) <= 3
+
+
 def test_security_headers_present():
     """All API responses include required security headers."""
     endpoints = ["/", "/api/thinking"]

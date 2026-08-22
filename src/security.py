@@ -87,15 +87,24 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
 
 
 class TokenBucketRateLimiter:
-    def __init__(self, rate: float = 60.0, capacity: float = 60.0, per_seconds: float = 60.0):
+    def __init__(self, rate: float = 60.0, capacity: float = 60.0, per_seconds: float = 60.0, max_keys: int = 10000):
         self.rate = rate / per_seconds  # tokens per second
         self.capacity = capacity
+        self.max_keys = max_keys
         # Mapping from ip -> (tokens, last_time)
         self.buckets: Dict[str, Tuple[float, float]] = {}
 
     def is_allowed(self, client_ip: str) -> bool:
         now = time.monotonic()
         if client_ip not in self.buckets:
+            if len(self.buckets) >= self.max_keys:
+                # Evict stale buckets that have fully regenerated
+                idle_threshold = self.capacity / self.rate
+                stale_keys = [ip for ip, (_, last_time) in self.buckets.items() if now - last_time > idle_threshold]
+                for ip in stale_keys:
+                    self.buckets.pop(ip, None)
+                if len(self.buckets) >= self.max_keys:
+                    self.buckets.clear()
             self.buckets[client_ip] = (self.capacity - 1.0, now)
             return True
 
