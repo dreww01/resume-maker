@@ -4,11 +4,20 @@ import importlib.metadata
 from fastapi import FastAPI, UploadFile, File, HTTPException, Body
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import Response
+from pydantic import BaseModel
 
 from src.database import create_resume, get_resume, update_resume
 from src.resume_processor import read_resume, call_openai, create_docx, call_openai_cover_letter, create_cover_letter_docx
 
 app = FastAPI(title="Resume Tailor API")
+
+
+class HealthResponse(BaseModel):
+    """Stable three-field contract for the health-check endpoint."""
+
+    status: str
+    timestamp: str
+    version: str
 
 # Application version — read from the installed package metadata so that
 # this value always matches pyproject.toml and whatever deployment tooling
@@ -32,8 +41,8 @@ async def root():
     return {"message": "Welcome to Resume Tailor API, Go to /docs to get started"}
 
 
-@app.get("/health")
-async def health_check():
+@app.get("/health", response_model=HealthResponse)
+async def health_check() -> HealthResponse:
     """Return a lightweight health-check payload.
 
     The endpoint is hermetic — it performs no I/O and never returns a
@@ -52,11 +61,11 @@ async def health_check():
             "version": "0.1.0"
         }
     """
-    return {
-        "status": "healthy",
-        "timestamp": datetime.datetime.now(datetime.timezone.utc).isoformat(),
-        "version": _APP_VERSION,
-    }
+    return HealthResponse(
+        status="healthy",
+        timestamp=datetime.datetime.now(datetime.timezone.utc).isoformat(),
+        version=_APP_VERSION,
+    )
 
 
 @app.post("/upload")
