@@ -1,4 +1,4 @@
-"""Unit and regression tests for the GET /api/health endpoint.
+"""Unit and regression tests for the GET /health endpoint.
 
 These tests are fully hermetic: they use FastAPI's TestClient (backed by
 httpx) and mock out every external dependency (database, resume processor,
@@ -125,31 +125,31 @@ def _assert_utc_timestamp(value: str) -> None:
 
 
 class TestHealthEndpointHttpSemantics:
-    """Verify HTTP-level contract of GET /api/health."""
+    """Verify HTTP-level contract of GET /health."""
 
     def test_status_code_is_200(self, client: TestClient) -> None:
         """The endpoint MUST return HTTP 200 OK."""
-        response = client.get("/api/health")
+        response = client.get("/health")
         assert response.status_code == 200
 
     def test_content_type_is_json(self, client: TestClient) -> None:
         """Response Content-Type must be application/json."""
-        response = client.get("/api/health")
+        response = client.get("/health")
         assert "application/json" in response.headers["content-type"]
 
     def test_method_not_allowed_for_post(self, client: TestClient) -> None:
-        """POST /api/health must not be routed (405 or 404, not 200)."""
-        response = client.post("/api/health")
+        """POST /health must not be routed (405 or 404, not 200)."""
+        response = client.post("/health")
         assert response.status_code in {404, 405}
 
     def test_method_not_allowed_for_put(self, client: TestClient) -> None:
-        """PUT /api/health must not be routed."""
-        response = client.put("/api/health")
+        """PUT /health must not be routed."""
+        response = client.put("/health")
         assert response.status_code in {404, 405}
 
     def test_method_not_allowed_for_delete(self, client: TestClient) -> None:
-        """DELETE /api/health must not be routed."""
-        response = client.delete("/api/health")
+        """DELETE /health must not be routed."""
+        response = client.delete("/health")
         assert response.status_code in {404, 405}
 
 
@@ -158,7 +158,7 @@ class TestHealthEndpointPayload:
 
     @pytest.fixture(autouse=True)
     def _response(self, client: TestClient) -> None:
-        self._resp = client.get("/api/health")
+        self._resp = client.get("/health")
         self._body = self._resp.json()
 
     def test_payload_has_status_field(self) -> None:
@@ -204,7 +204,7 @@ class TestHealthEndpointTimestamp:
 
     def test_timestamp_uses_utc_timezone(self, client: TestClient) -> None:
         """Returned timestamp must be UTC-aware (offset +00:00 or Z)."""
-        response = client.get("/api/health")
+        response = client.get("/health")
         ts_str = response.json()["timestamp"]
         parsed = datetime.datetime.fromisoformat(ts_str)
         # UTC offset must be zero.
@@ -214,8 +214,8 @@ class TestHealthEndpointTimestamp:
 
     def test_timestamp_advances_between_calls(self, client: TestClient) -> None:
         """Successive calls should produce non-decreasing timestamps."""
-        r1 = client.get("/api/health").json()["timestamp"]
-        r2 = client.get("/api/health").json()["timestamp"]
+        r1 = client.get("/health").json()["timestamp"]
+        r2 = client.get("/health").json()["timestamp"]
         t1 = datetime.datetime.fromisoformat(r1)
         t2 = datetime.datetime.fromisoformat(r2)
         assert t2 >= t1, (
@@ -237,7 +237,7 @@ class TestHealthEndpointTimestamp:
         with mock.patch("src.api.datetime") as mock_dt_module:
             mock_dt_module.datetime = _FrozenDatetime
             mock_dt_module.timezone = datetime.timezone
-            response = client.get("/api/health")
+            response = client.get("/health")
 
         assert response.status_code == 200
         returned_ts = response.json()["timestamp"]
@@ -253,7 +253,7 @@ class TestHealthEndpointRegression:
     def test_endpoint_is_idempotent(self, client: TestClient) -> None:
         """Multiple GET requests all succeed with the same shape."""
         for _ in range(5):
-            response = client.get("/api/health")
+            response = client.get("/health")
             assert response.status_code == 200
             body = response.json()
             assert body["status"] == "healthy"
@@ -261,31 +261,31 @@ class TestHealthEndpointRegression:
             _assert_utc_timestamp(body["timestamp"])
 
     def test_endpoint_registered_in_openapi_schema(self, client: TestClient) -> None:
-        """The /api/health route must appear in the auto-generated OpenAPI spec."""
+        """The /health route must appear in the auto-generated OpenAPI spec."""
         schema = client.get("/openapi.json").json()
         paths = schema.get("paths", {})
-        assert "/api/health" in paths, (
-            f"/api/health not found in OpenAPI paths: {list(paths.keys())}"
+        assert "/health" in paths, (
+            f"/health not found in OpenAPI paths: {list(paths.keys())}"
         )
 
     def test_openapi_health_route_supports_get(self, client: TestClient) -> None:
-        """The OpenAPI entry for /api/health must declare a GET operation."""
+        """The OpenAPI entry for /health must declare a GET operation."""
         schema = client.get("/openapi.json").json()
-        health_ops = schema["paths"]["/api/health"]
+        health_ops = schema["paths"]["/health"]
         assert "get" in health_ops, (
-            f"Expected 'get' operation for /api/health, found: {list(health_ops.keys())}"
+            f"Expected 'get' operation for /health, found: {list(health_ops.keys())}"
         )
 
     def test_status_field_type_is_string(self, client: TestClient) -> None:
-        body = client.get("/api/health").json()
+        body = client.get("/health").json()
         assert isinstance(body["status"], str)
 
     def test_version_field_type_is_string(self, client: TestClient) -> None:
-        body = client.get("/api/health").json()
+        body = client.get("/health").json()
         assert isinstance(body["version"], str)
 
     def test_timestamp_field_type_is_string(self, client: TestClient) -> None:
-        body = client.get("/api/health").json()
+        body = client.get("/health").json()
         assert isinstance(body["timestamp"], str)
 
     def test_version_semver_format(self, client: TestClient) -> None:
@@ -293,7 +293,7 @@ class TestHealthEndpointRegression:
         optional pre-release suffix (e.g. '0.0.0-dev' when the package is not
         installed in editable mode).
         """
-        body = client.get("/api/health").json()
+        body = client.get("/health").json()
         semver_re = re.compile(r"^\d+\.\d+\.\d+(-.+)?$")
         assert semver_re.match(body["version"]), (
             f"Version {body['version']!r} does not match MAJOR.MINOR.PATCH[-prerelease]"

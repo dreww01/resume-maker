@@ -32,7 +32,7 @@ async def root():
     return {"message": "Welcome to Resume Tailor API, Go to /docs to get started"}
 
 
-@app.get("/api/health")
+@app.get("/health")
 async def health_check():
     """Return a lightweight health-check payload.
 
