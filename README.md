@@ -119,6 +119,7 @@ Or run both with the startup script:
 
 | Endpoint                              | Method | Description                      |
 | ------------------------------------- | ------ | -------------------------------- |
+| `/api/health`                         | GET    | Health check and system status   |
 | `/upload`                             | POST   | Upload a resume (PDF/DOCX)       |
 | `/resumes/{id}/tailor`                | POST   | Tailor resume to job description |
 | `/resumes/{id}/cover-letter`          | POST   | Generate cover letter            |

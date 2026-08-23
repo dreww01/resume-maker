@@ -1,3 +1,4 @@
+from datetime import datetime, timezone
 from fastapi import FastAPI, UploadFile, File, HTTPException, Body
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import Response
@@ -19,6 +20,15 @@ app.add_middleware(
 @app.get("/")
 async def root():
     return {"message": "Welcome to Resume Tailor API, Go to /docs to get started"}
+
+
+@app.get("/api/health")
+async def health_check():
+    return {
+        "status": "healthy",
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "version": "1.0.0",
+    }
 
 
 @app.post("/upload")

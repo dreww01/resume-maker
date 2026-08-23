@@ -9,6 +9,9 @@ wheels/
 # Virtual environments
 .venv
 
+# Local uv package cache
+.uvcache/
+
 # Environment variables
 .env
 
