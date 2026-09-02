@@ -269,9 +269,7 @@ def call_openai(resume_text: str, job_description: str) -> dict[str, Any]:
         return validated_model.model_dump()
     except ValidationError as exc:
         logger.error("AI tailored resume output validation failed: %s", exc)
-        if not isinstance(parsed_json, dict) or "name" not in parsed_json:
-            raise ValueError(f"AI tailored resume output validation failed: {exc}") from exc
-        return parsed_json
+        raise ValueError(f"AI tailored resume output validation failed: {exc}") from exc
 
 
 def call_openai_cover_letter(resume_text: str, job_description: str) -> dict[str, Any]:
@@ -317,9 +315,7 @@ def call_openai_cover_letter(resume_text: str, job_description: str) -> dict[str
         return validated_model.model_dump()
     except ValidationError as exc:
         logger.error("AI cover letter output validation failed: %s", exc)
-        if not isinstance(parsed_json, dict) or "content" not in parsed_json:
-            raise ValueError(f"AI cover letter output validation failed: {exc}") from exc
-        return parsed_json
+        raise ValueError(f"AI cover letter output validation failed: {exc}") from exc
 
 
 # ---------------------------------------------------------------------------

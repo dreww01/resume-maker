@@ -234,3 +234,43 @@ def test_download_nonexistent_resume():
     """Verify downloading nonexistent resume returns 404."""
     response = client.get("/resumes/999999/download")
     assert response.status_code == 404
+
+
+@patch("src.api.call_openai")
+def test_tailor_resume_invalid_schema_returns_502(mock_call_openai):
+    """Verify HTTP 502 Bad Gateway is returned when call_openai raises ValueError on schema validation failure."""
+    doc = Document()
+    doc.add_paragraph("Bob Jones")
+    buffer = io.BytesIO()
+    doc.save(buffer)
+    docx_bytes = buffer.getvalue()
+
+    resume_id = create_resume("invalid_schema.docx", docx_bytes)
+    mock_call_openai.side_effect = ValueError("AI tailored resume output validation failed: 1 validation error")
+
+    response = client.post(
+        f"/resumes/{resume_id}/tailor",
+        json={"job_description": "We need a Senior Python developer with FastAPI and Kubernetes skills."}
+    )
+    assert response.status_code == 502
+    assert "upstream" in response.json()["detail"].lower() or "ai service failure" in response.json()["detail"].lower()
+
+
+@patch("src.api.call_openai_cover_letter")
+def test_generate_cover_letter_invalid_schema_returns_502(mock_call_openai_cover_letter):
+    """Verify HTTP 502 Bad Gateway is returned when call_openai_cover_letter raises ValueError on schema validation failure."""
+    doc = Document()
+    doc.add_paragraph("Bob Jones")
+    buffer = io.BytesIO()
+    doc.save(buffer)
+    docx_bytes = buffer.getvalue()
+
+    resume_id = create_resume("invalid_cover_schema.docx", docx_bytes)
+    mock_call_openai_cover_letter.side_effect = ValueError("AI cover letter output validation failed: 1 validation error")
+
+    response = client.post(
+        f"/resumes/{resume_id}/cover-letter",
+        json={"job_description": "We need a Senior Python developer with FastAPI and Kubernetes skills."}
+    )
+    assert response.status_code == 502
+    assert "upstream" in response.json()["detail"].lower() or "ai service failure" in response.json()["detail"].lower()

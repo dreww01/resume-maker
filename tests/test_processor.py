@@ -1,6 +1,8 @@
 """Unit tests for resume processor, document builder helpers, and schema parsing."""
 
 import io
+import json
+from unittest.mock import MagicMock, patch
 import pytest
 from docx import Document
 from src.resume_processor import (
@@ -175,3 +177,36 @@ def test_get_openai_client_missing_key(monkeypatch):
     monkeypatch.delenv("OPENAI_API_KEY", raising=False)
     with pytest.raises(ValueError, match="OPENAI_API_KEY is not set"):
         get_openai_client()
+
+
+@patch("src.resume_processor.get_openai_client")
+def test_call_openai_validation_error(mock_get_client):
+    """Verify ValidationError is caught and re-raised as ValueError when AI output fails schema validation."""
+    mock_client = MagicMock()
+    mock_get_client.return_value = mock_client
+    invalid_payload = json.dumps({
+        "name": "Jane Doe",
+        "work_experience": "Invalid work experience string"
+    })
+    mock_response = MagicMock()
+    mock_response.choices = [MagicMock(message=MagicMock(content=invalid_payload))]
+    mock_client.chat.completions.create.return_value = mock_response
+
+    with pytest.raises(ValueError, match="AI tailored resume output validation failed"):
+        call_openai("resume text", "job desc")
+
+
+@patch("src.resume_processor.get_openai_client")
+def test_call_openai_cover_letter_validation_error(mock_get_client):
+    """Verify ValidationError is caught and re-raised as ValueError when AI cover letter output fails schema validation."""
+    mock_client = MagicMock()
+    mock_get_client.return_value = mock_client
+    invalid_payload = json.dumps({
+        "content": 12345
+    })
+    mock_response = MagicMock()
+    mock_response.choices = [MagicMock(message=MagicMock(content=invalid_payload))]
+    mock_client.chat.completions.create.return_value = mock_response
+
+    with pytest.raises(ValueError, match="AI cover letter output validation failed"):
+        call_openai_cover_letter("resume text", "job desc")
