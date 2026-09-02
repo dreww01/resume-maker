@@ -158,7 +158,7 @@ async def upload_resume(
         status.HTTP_502_BAD_GATEWAY: {"model": ErrorResponse},
     },
 )
-async def tailor_resume(
+def tailor_resume(
     resume_id: int,
     payload: TailorResumeRequest,
 ) -> TailorResumeResponse:
@@ -239,7 +239,7 @@ async def tailor_resume(
         status.HTTP_502_BAD_GATEWAY: {"model": ErrorResponse},
     },
 )
-async def generate_cover_letter(
+def generate_cover_letter(
     resume_id: int,
     payload: CoverLetterRequest,
 ) -> CoverLetterResponse:
