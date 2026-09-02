@@ -41,7 +41,7 @@ erDiagram
 | `original_filename` | `VARCHAR` | Yes | `NULL` | The original file name uploaded by the user (e.g. `resume.pdf`). |
 | `file_content` | `BLOB` (`LargeBinary`) | Yes | `NULL` | Binary content of the original uploaded PDF or DOCX file. |
 | `user_name` | `VARCHAR` | Yes | `NULL` | The candidate's name parsed by the AI model during tailoring. |
-| `created_at` | `DATETIME` | Yes | `datetime.utcnow` | Timestamp when the resume record was created. |
+| `created_at` | `DATETIME(timezone=True)` | Yes | `lambda: datetime.now(timezone.utc)` | Timestamp when the resume record was created (UTC with timezone). |
 | `status` | `VARCHAR` | Yes | `'uploaded'` | Lifecycle state: `'uploaded'`, `'processing'`, or `'completed'`. |
 | `job_description` | `TEXT` (`String`) | Yes | `NULL` | The text of the target job description submitted by the user. |
 | `output_content` | `BLOB` (`LargeBinary`) | Yes | `NULL` | Binary content of the generated tailored DOCX resume. |

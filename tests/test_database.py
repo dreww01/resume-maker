@@ -16,6 +16,7 @@ def test_create_and_get_resume():
     assert resume["original_filename"] == filename
     assert resume["file_content"] == file_bytes
     assert resume["status"] == "uploaded"
+    assert resume["created_at"] is not None
     assert resume["user_name"] is None
     assert resume["output_content"] is None
     assert resume["cover_letter_content"] is None

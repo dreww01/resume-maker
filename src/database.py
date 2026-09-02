@@ -31,7 +31,7 @@ class Resume(Base):
     original_filename = Column(String)
     file_content = Column(LargeBinary)
     user_name = Column(String)
-    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
     status = Column(String)
     job_description = Column(String)
     output_content = Column(LargeBinary)
