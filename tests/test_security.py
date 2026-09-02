@@ -27,7 +27,7 @@ def client():
 # ---------------------------------------------------------------------------
 
 def test_payload_exceeding_content_length_returns_413(client):
-    """Requests with Content-Length > 5MB must return 413."""
+    """Requests with Content-Length > 5MB must return 413 and include security headers."""
     oversized_length = (5 * 1024 * 1024) + 1  # 5MB + 1 byte
     response = client.post(
         "/resumes/1/tailor",
@@ -36,10 +36,13 @@ def test_payload_exceeding_content_length_returns_413(client):
     )
     assert response.status_code == 413
     assert "payload too large" in response.json()["detail"].lower()
+    assert response.headers.get("X-Content-Type-Options") == "nosniff"
+    assert response.headers.get("X-Frame-Options") == "DENY"
+    assert response.headers.get("Strict-Transport-Security") == "max-age=31536000; includeSubDomains"
 
 
 def test_payload_exceeding_body_size_returns_413(client):
-    """Requests with actual body payload > 5MB must return 413."""
+    """Requests with actual body payload > 5MB must return 413 and include security headers."""
     oversized_data = b"x" * (5 * 1024 * 1024 + 100)
     response = client.post(
         "/resumes/1/tailor",
@@ -48,15 +51,21 @@ def test_payload_exceeding_body_size_returns_413(client):
     )
     assert response.status_code == 413
     assert "payload too large" in response.json()["detail"].lower()
+    assert response.headers.get("X-Content-Type-Options") == "nosniff"
+    assert response.headers.get("X-Frame-Options") == "DENY"
+    assert response.headers.get("Strict-Transport-Security") == "max-age=31536000; includeSubDomains"
 
 
 def test_file_upload_exceeding_5mb_returns_413(client):
-    """File uploads exceeding 5MB must return 413."""
+    """File uploads exceeding 5MB must return 413 and include security headers."""
     oversized_bytes = b"a" * (5 * 1024 * 1024 + 50)
     files = {"file": ("resume.pdf", io.BytesIO(oversized_bytes), "application/pdf")}
     response = client.post("/upload", files=files)
     assert response.status_code == 413
     assert "payload too large" in response.json()["detail"].lower()
+    assert response.headers.get("X-Content-Type-Options") == "nosniff"
+    assert response.headers.get("X-Frame-Options") == "DENY"
+    assert response.headers.get("Strict-Transport-Security") == "max-age=31536000; includeSubDomains"
 
 
 def test_payload_within_5mb_allowed(client):

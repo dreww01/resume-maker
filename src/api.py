@@ -16,8 +16,8 @@ from src.security import (
 app = FastAPI(title="Resume Tailor API")
 
 # Middlewares: Security headers and payload size limits
-app.add_middleware(SecurityHeadersMiddleware)
 app.add_middleware(ContentSizeLimitMiddleware, max_upload_size=MAX_REQUEST_BODY_SIZE)
+app.add_middleware(SecurityHeadersMiddleware)
 
 app.add_middleware(
     CORSMiddleware,
