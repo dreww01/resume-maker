@@ -461,4 +461,15 @@ def test_service_crash_exit_code_propagation():
     assert result.returncode != 0, f"Expected non-zero returncode on service crash, got {result.returncode}"
 
 
+def test_dockerfile_configures_backend_host_all_interfaces():
+    """Test that Dockerfile sets ENV BACKEND_HOST=0.0.0.0 and exposes ports 8501 and 8000."""
+    dockerfile_path = os.path.join(PROJECT_ROOT, "Dockerfile")
+    assert os.path.exists(dockerfile_path)
+    with open(dockerfile_path, "r") as f:
+        content = f.read()
+
+    assert "ENV BACKEND_HOST=0.0.0.0" in content
+    assert "EXPOSE 8501 8000" in content
+
+
 

@@ -18,4 +18,6 @@ RUN chmod +x run.sh start.sh
 
 EXPOSE 8501 8000
 
+ENV BACKEND_HOST=0.0.0.0
+
 CMD ["./run.sh"]
