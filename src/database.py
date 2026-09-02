@@ -15,14 +15,22 @@ logger = logging.getLogger(__name__)
 from sqlalchemy.pool import StaticPool
 
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///:memory:")
-if DATABASE_URL.startswith("sqlite"):
-    engine = create_engine(
-        DATABASE_URL,
-        connect_args={"check_same_thread": False},
-        poolclass=StaticPool,
-    )
-else:
-    engine = create_engine(DATABASE_URL)
+
+
+def create_database_engine(url: str):
+    """
+    Create SQLAlchemy engine.
+    Applies StaticPool only for in-memory SQLite databases.
+    """
+    if url.startswith("sqlite"):
+        kwargs = {"connect_args": {"check_same_thread": False}}
+        if ":memory:" in url or url in ("sqlite://", "sqlite:///") or "mode=memory" in url:
+            kwargs["poolclass"] = StaticPool
+        return create_engine(url, **kwargs)
+    return create_engine(url)
+
+
+engine = create_database_engine(DATABASE_URL)
 
 Base = declarative_base()
 
