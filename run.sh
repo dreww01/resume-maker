@@ -33,6 +33,9 @@ log_error() {
 # Signal cleanup handler
 cleanup() {
     local exit_code="${1:-0}"
+    if [ "$exit_code" -eq 130 ] || [ "$exit_code" -eq 143 ]; then
+        exit_code=0
+    fi
     if [ "$CLEANING_UP" -eq 1 ]; then
         return
     fi
@@ -275,8 +278,9 @@ start_backend() {
         "$PYTHON_BIN" -m uvicorn src.api:app --host "$BACKEND_HOST" --port "$BACKEND_PORT" &
         BACKEND_PID=$!
         log_info "FastAPI backend running in foreground (PID: $BACKEND_PID). Press Ctrl+C to terminate."
-        wait "$BACKEND_PID" 2>/dev/null || true
-        cleanup
+        local exit_code=0
+        wait "$BACKEND_PID" 2>/dev/null || exit_code=$?
+        cleanup "$exit_code"
     fi
 }
 
@@ -295,8 +299,9 @@ start_frontend() {
         FRONTEND_PID=$!
         log_info "Streamlit frontend running in foreground (PID: $FRONTEND_PID). Press Ctrl+C to terminate."
         # Wait for foreground frontend PID
-        wait "$FRONTEND_PID" 2>/dev/null || true
-        cleanup
+        local exit_code=0
+        wait "$FRONTEND_PID" 2>/dev/null || exit_code=$?
+        cleanup "$exit_code"
     fi
 }
 
@@ -317,8 +322,15 @@ run_all() {
     log_info "Press Ctrl+C to terminate both services."
     log_info "=================================================="
 
-    wait "$BACKEND_PID" "$FRONTEND_PID" 2>/dev/null || true
-    cleanup
+    local exit_code=0
+    wait "$BACKEND_PID" 2>/dev/null || exit_code=$?
+    if [ "$exit_code" -ne 0 ]; then
+        cleanup "$exit_code"
+    fi
+    if [ -n "$FRONTEND_PID" ]; then
+        wait "$FRONTEND_PID" 2>/dev/null || exit_code=$?
+    fi
+    cleanup "$exit_code"
 }
 
 # Run pytest test suite

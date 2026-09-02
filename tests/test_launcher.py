@@ -408,3 +408,20 @@ def test_cleanup_preserves_nonzero_exit_status():
     assert "Timed out waiting for FastAPI backend" in result.stderr or "Timed out waiting for FastAPI backend" in result.stdout
 
 
+def test_service_crash_exit_code_propagation():
+    """Test that background process failure propagates non-zero exit code through cleanup."""
+    env = os.environ.copy()
+    env["BACKEND_HOST"] = "256.256.256.256"  # Invalid IP address causing uvicorn crash
+
+    result = subprocess.run(
+        [SCRIPT_PATH, "backend"],
+        cwd=PROJECT_ROOT,
+        capture_output=True,
+        text=True,
+        env=env,
+        timeout=15,
+    )
+    assert result.returncode != 0, f"Expected non-zero returncode on service crash, got {result.returncode}"
+
+
+
