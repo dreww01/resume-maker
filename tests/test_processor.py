@@ -1,12 +1,44 @@
+"""Unit tests for resume processor, document builder helpers, and schema parsing."""
+
 import io
+import json
+from unittest.mock import MagicMock, patch
 import pytest
 from docx import Document
-from src.resume_processor import create_docx, create_cover_letter_docx, read_resume, get_openai_client
+from src.resume_processor import (
+    add_bullet_item,
+    add_styled_heading,
+    call_openai,
+    call_openai_cover_letter,
+    create_cover_letter_docx,
+    create_docx,
+    get_openai_client,
+    read_resume,
+    set_document_margins,
+)
 from src.prompts.resume_tailor import SYSTEM_PROMPT, USER_PROMPT_TEMPLATE
 from src.prompts.cover_letter import COVER_LETTER_SYSTEM_PROMPT, COVER_LETTER_USER_TEMPLATE
+from src.schemas import TailoredResumeData, CoverLetterData
+
+
+def test_docx_builder_helpers():
+    """Verify document margins, styled headings, and bullet item helpers."""
+    doc = Document()
+    set_document_margins(doc, top=0.75, bottom=0.75, left=0.75, right=0.75)
+    for section in doc.sections:
+        assert round(section.top_margin.inches, 2) == 0.75
+        assert round(section.bottom_margin.inches, 2) == 0.75
+
+    add_styled_heading(doc, "Professional Summary")
+    add_bullet_item(doc, "Developed scalable microservices in Python.")
+
+    assert len(doc.paragraphs) >= 2
+    assert "PROFESSIONAL SUMMARY" in doc.paragraphs[0].text
+    assert "Developed scalable microservices in Python." in doc.paragraphs[1].text
 
 
 def test_create_docx_generation():
+    """Verify full DOCX generation from structured resume dictionary."""
     resume_data = {
         "name": "Jane Doe",
         "email": "jane.doe@example.com",
@@ -59,7 +91,25 @@ def test_create_docx_generation():
     assert "Python" in full_text
 
 
+def test_create_docx_from_pydantic_model():
+    """Verify DOCX generation from a Pydantic TailoredResumeData instance."""
+    data_model = TailoredResumeData(
+        name="John Candidate",
+        email="john@example.com",
+        skills=["Python", "SQLAlchemy"],
+        education=[{"degree": "B.S.", "institution": "State University", "year": "2020"}]
+    )
+    docx_bytes = create_docx(data_model)
+    assert isinstance(docx_bytes, bytes)
+    assert len(docx_bytes) > 0
+    doc = Document(io.BytesIO(docx_bytes))
+    full_text = "\n".join([p.text for p in doc.paragraphs])
+    assert "John Candidate" in full_text
+    assert "State University" in full_text
+
+
 def test_create_cover_letter_docx_generation():
+    """Verify cover letter DOCX generation."""
     cover_letter_text = (
         "Dear Hiring Manager,\n\n"
         "I am writing to express my strong enthusiasm for the Senior Software Engineer position.\n\n"
@@ -78,6 +128,7 @@ def test_create_cover_letter_docx_generation():
 
 
 def test_read_resume_docx():
+    """Verify text extraction from DOCX file bytes."""
     doc = Document()
     doc.add_paragraph("First paragraph of resume.")
     doc.add_paragraph("Second paragraph with experience.")
@@ -91,11 +142,13 @@ def test_read_resume_docx():
 
 
 def test_read_resume_invalid_extension():
+    """Verify unsupported file extension raises ValueError."""
     with pytest.raises(ValueError, match="File must be .pdf or .docx"):
         read_resume(b"some content", "resume.txt")
 
 
 def test_prompt_templates_formatting():
+    """Verify prompt formatting with dynamic parameters."""
     formatted_resume = USER_PROMPT_TEMPLATE.format(
         resume_text="Sample resume text",
         job_description="Sample job description"
@@ -112,6 +165,95 @@ def test_prompt_templates_formatting():
 
 
 def test_get_openai_client(monkeypatch):
+    """Verify OpenAI client construction with custom baseURL."""
     monkeypatch.setenv("OPENAI_BASE_URL", "http://localhost:11434/v1")
+    monkeypatch.setenv("OPENAI_API_KEY", "test-key")
     client = get_openai_client()
     assert str(client.base_url) == "http://localhost:11434/v1/"
+
+
+def test_get_openai_client_missing_key(monkeypatch):
+    """Verify error raised when OPENAI_API_KEY is not set."""
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    with pytest.raises(ValueError, match="OPENAI_API_KEY is not set"):
+        get_openai_client()
+
+
+@patch("src.resume_processor.get_openai_client")
+def test_call_openai_validation_error(mock_get_client):
+    """Verify ValidationError is caught and re-raised as ValueError when AI output fails schema validation."""
+    mock_client = MagicMock()
+    mock_get_client.return_value = mock_client
+    invalid_payload = json.dumps({
+        "name": "Jane Doe",
+        "work_experience": "Invalid work experience string"
+    })
+    mock_response = MagicMock()
+    mock_response.choices = [MagicMock(message=MagicMock(content=invalid_payload))]
+    mock_client.chat.completions.create.return_value = mock_response
+
+    with pytest.raises(ValueError, match="AI tailored resume output validation failed"):
+        call_openai("resume text", "job desc")
+
+
+@patch("src.resume_processor.get_openai_client")
+def test_call_openai_cover_letter_validation_error(mock_get_client):
+    """Verify ValidationError is caught and re-raised as ValueError when AI cover letter output fails schema validation."""
+    mock_client = MagicMock()
+    mock_get_client.return_value = mock_client
+    invalid_payload = json.dumps({
+        "content": 12345
+    })
+    mock_response = MagicMock()
+    mock_response.choices = [MagicMock(message=MagicMock(content=invalid_payload))]
+    mock_client.chat.completions.create.return_value = mock_response
+
+    with pytest.raises(ValueError, match="AI cover letter output validation failed"):
+        call_openai_cover_letter("resume text", "job desc")
+
+
+def test_create_docx_with_none_values():
+    """Verify DOCX generation when dictionary payload contains None for candidate fields."""
+    resume_data = {
+        "name": None,
+        "email": None,
+        "phone": None,
+        "location": None,
+        "github": None,
+        "linkedin": None,
+        "portfolio": None,
+        "professional_summary": None,
+        "work_experience": [
+            {
+                "title": None,
+                "company": None,
+                "duration": None,
+                "bullets": [None, "Built microservices"]
+            }
+        ],
+        "projects": [
+            {
+                "name": None,
+                "bullets": ["Project bullet"]
+            }
+        ],
+        "skills": [None, "Python"],
+        "soft_skills": [None, "Leadership"],
+        "education": [
+            {
+                "degree": None,
+                "institution": None,
+                "year": None
+            }
+        ]
+    }
+
+    docx_bytes = create_docx(resume_data)
+    assert isinstance(docx_bytes, bytes)
+    assert len(docx_bytes) > 0
+
+    doc = Document(io.BytesIO(docx_bytes))
+    full_text = "\n".join([p.text for p in doc.paragraphs])
+    assert "Resume" in full_text
+    assert "Built microservices" in full_text
+    assert "Python" in full_text
