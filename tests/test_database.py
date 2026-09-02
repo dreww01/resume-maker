@@ -1,10 +1,23 @@
+"""Unit tests for SQLAlchemy database models and repository layer operations."""
+
 import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.pool import StaticPool
-from src.database import create_resume, get_resume, update_resume, delete_resume, get_engine_kwargs
+from src.database import (
+    ResumeRepository,
+    create_resume,
+    delete_resume,
+    get_db,
+    get_engine_kwargs,
+    get_resume,
+    get_resume_model,
+    get_session,
+    update_resume,
+)
 
 
 def test_in_memory_sqlite_uses_static_pool():
+    """Verify in-memory SQLite connection strings configure StaticPool correctly."""
     in_memory_urls = [
         "sqlite:///:memory:",
         "sqlite://",
@@ -19,6 +32,7 @@ def test_in_memory_sqlite_uses_static_pool():
 
 
 def test_file_based_sqlite_does_not_use_static_pool():
+    """Verify file-backed SQLite connections do not use StaticPool."""
     file_urls = [
         "sqlite:///test.db",
         "sqlite:////tmp/test.db",
@@ -30,11 +44,11 @@ def test_file_based_sqlite_does_not_use_static_pool():
         assert not isinstance(engine.pool, StaticPool)
 
 
-
 def test_create_and_get_resume():
+    """Verify creating and retrieving resume via dict and model access."""
     file_bytes = b"Sample resume binary content"
     filename = "test_resume.pdf"
-    
+
     resume_id = create_resume(filename, file_bytes)
     assert isinstance(resume_id, int)
     assert resume_id > 0
@@ -43,45 +57,67 @@ def test_create_and_get_resume():
     assert resume is not None
     assert resume["id"] == resume_id
     assert resume["original_filename"] == filename
+    assert resume["filename"] == filename
     assert resume["file_content"] == file_bytes
     assert resume["status"] == "uploaded"
     assert resume["created_at"] is not None
     assert resume["user_name"] is None
     assert resume["output_content"] is None
     assert resume["cover_letter_content"] is None
+    assert resume["has_tailored_resume"] is False
+    assert resume["has_cover_letter"] is False
+
+    # Also test get_resume_model
+    model = get_resume_model(resume_id)
+    assert model is not None
+    assert model.id == resume_id
+    assert model.original_filename == filename
+    assert model.has_tailored_resume is False
+    assert model.has_cover_letter is False
 
 
 def test_get_nonexistent_resume():
+    """Verify querying invalid ID returns None."""
     resume = get_resume(999999)
     assert resume is None
 
+    model = get_resume_model(999999)
+    assert model is None
+
 
 def test_update_resume():
+    """Verify updating fields on an existing resume record."""
     file_bytes = b"Original bytes"
     resume_id = create_resume("candidate.docx", file_bytes)
 
-    updated = update_resume(
+    updated_model = update_resume(
         resume_id,
         status="completed",
         user_name="John Doe",
         job_description="Senior Python Developer",
-        output_content=b"Tailored DOCX bytes"
+        output_content=b"Tailored DOCX bytes",
     )
-    assert updated is True
+    assert updated_model is not None
+    assert updated_model.status == "completed"
+    assert updated_model.user_name == "John Doe"
 
     resume = get_resume(resume_id)
+    assert resume is not None
     assert resume["status"] == "completed"
     assert resume["user_name"] == "John Doe"
     assert resume["job_description"] == "Senior Python Developer"
     assert resume["output_content"] == b"Tailored DOCX bytes"
+    assert resume["has_tailored_resume"] is True
 
 
 def test_update_nonexistent_resume():
+    """Verify updating nonexistent resume returns None."""
     result = update_resume(999999, status="completed")
-    assert result is False
+    assert result is None
 
 
 def test_delete_resume():
+    """Verify deleting a resume returns True and removes it from the database."""
     resume_id = create_resume("to_delete.pdf", b"data")
     assert get_resume(resume_id) is not None
 
@@ -91,5 +127,26 @@ def test_delete_resume():
 
 
 def test_delete_nonexistent_resume():
+    """Verify deleting nonexistent record returns False."""
     deleted = delete_resume(999999)
     assert deleted is False
+
+
+def test_repository_with_explicit_session():
+    """Verify ResumeRepository operations when reusing a provided session."""
+    with get_db() as session:
+        repo = ResumeRepository(session=session)
+        created = repo.create("repo_test.docx", b"test content")
+        assert created.id > 0
+
+        found = repo.get_by_id(created.id)
+        assert found is not None
+        assert found.original_filename == "repo_test.docx"
+
+        updated = repo.update(created.id, status="processing")
+        assert updated is not None
+        assert updated.status == "processing"
+
+        deleted = repo.delete(created.id)
+        assert deleted is True
+        assert repo.get_by_id(created.id) is None
