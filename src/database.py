@@ -3,9 +3,11 @@ import logging
 from sqlalchemy.orm import sessionmaker, declarative_base
 from sqlalchemy import create_engine, Column, Integer, String, DateTime, LargeBinary
 from sqlalchemy.exc import SQLAlchemyError
-from datetime import datetime
+from datetime import datetime, timezone
 from contextlib import contextmanager
 from dotenv import load_dotenv
+
+from sqlalchemy.pool import StaticPool
 
 load_dotenv()
 
@@ -13,7 +15,11 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///:memory:")
-engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
+engine_kwargs = {"connect_args": {"check_same_thread": False}}
+if ":memory:" in DATABASE_URL:
+    engine_kwargs["poolclass"] = StaticPool
+
+engine = create_engine(DATABASE_URL, **engine_kwargs)
 
 Base = declarative_base()
 
@@ -24,7 +30,7 @@ class Resume(Base):
     original_filename = Column(String)
     file_content = Column(LargeBinary)
     user_name = Column(String)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     status = Column(String)
     job_description = Column(String)
     output_content = Column(LargeBinary)
