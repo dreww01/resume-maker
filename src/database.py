@@ -12,8 +12,17 @@ load_dotenv()
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+from sqlalchemy.pool import StaticPool
+
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///:memory:")
-engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
+connect_args = {}
+pool_kwargs = {}
+if DATABASE_URL.startswith("sqlite"):
+    connect_args["check_same_thread"] = False
+    if ":memory:" in DATABASE_URL:
+        pool_kwargs["poolclass"] = StaticPool
+
+engine = create_engine(DATABASE_URL, connect_args=connect_args, **pool_kwargs)
 
 Base = declarative_base()
 

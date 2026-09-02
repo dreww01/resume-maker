@@ -8,6 +8,8 @@ wheels/
 
 # Virtual environments
 .venv
+.deps
+
 
 # Environment variables
 .env

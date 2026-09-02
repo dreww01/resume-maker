@@ -1,11 +1,23 @@
-from fastapi import FastAPI, UploadFile, File, HTTPException, Body
+from fastapi import FastAPI, UploadFile, File, HTTPException, Body, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import Response
 
 from src.database import create_resume, get_resume, update_resume
 from src.resume_processor import read_resume, call_openai, create_docx, call_openai_cover_letter, create_cover_letter_docx
+from src.security import (
+    ContentSizeLimitMiddleware,
+    SecurityHeadersMiddleware,
+    TokenBucketRateLimiter,
+    rate_limiter,
+    rate_limit_dependency,
+    MAX_REQUEST_BODY_SIZE
+)
 
 app = FastAPI(title="Resume Tailor API")
+
+# Middlewares: Security headers and payload size limits
+app.add_middleware(SecurityHeadersMiddleware)
+app.add_middleware(ContentSizeLimitMiddleware, max_upload_size=MAX_REQUEST_BODY_SIZE)
 
 app.add_middleware(
     CORSMiddleware,
@@ -21,7 +33,7 @@ async def root():
     return {"message": "Welcome to Resume Tailor API, Go to /docs to get started"}
 
 
-@app.post("/upload")
+@app.post("/upload", dependencies=[Depends(rate_limit_dependency)])
 async def upload_resume(file: UploadFile = File(...)):
     if not file.filename.endswith(('.pdf', '.docx')):
         raise HTTPException(400, "File must be .pdf or .docx")
@@ -32,7 +44,7 @@ async def upload_resume(file: UploadFile = File(...)):
     return {"id": resume_id, "filename": file.filename}
 
 
-@app.post("/resumes/{resume_id}/tailor")
+@app.post("/resumes/{resume_id}/tailor", dependencies=[Depends(rate_limit_dependency)])
 def tailor_resume(resume_id: int, job_description: str = Body(..., media_type="text/plain")):
     resume = get_resume(resume_id)
     if not resume:
@@ -51,7 +63,7 @@ def tailor_resume(resume_id: int, job_description: str = Body(..., media_type="t
     return {"status": "completed", "user_name": user_name}
 
 
-@app.post("/resumes/{resume_id}/cover-letter")
+@app.post("/resumes/{resume_id}/cover-letter", dependencies=[Depends(rate_limit_dependency)])
 def generate_cover_letter(resume_id: int, job_description: str = Body(..., media_type="text/plain")):
     resume = get_resume(resume_id)
     if not resume:
