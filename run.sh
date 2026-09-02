@@ -248,7 +248,6 @@ wait_for_backend() {
         if [ -n "$BACKEND_PID" ] && ! kill -0 "$BACKEND_PID" 2>/dev/null; then
             log_error "FastAPI backend process terminated unexpectedly during startup."
             cleanup 1
-            exit 1
         fi
 
         if probe_backend_health "$probe_host" "$BACKEND_PORT"; then
@@ -262,7 +261,6 @@ wait_for_backend() {
 
     log_error "Timed out waiting for FastAPI backend to respond after ${HEALTH_TIMEOUT}s."
     cleanup 1
-    exit 1
 }
 
 # Start backend service
