@@ -461,6 +461,74 @@ def test_service_crash_exit_code_propagation():
     assert result.returncode != 0, f"Expected non-zero returncode on service crash, got {result.returncode}"
 
 
+def test_frontend_crash_triggers_cleanup_and_nonzero_exit():
+    """Test that a crash of the frontend process causes run.sh all to exit non-zero and clean up backend."""
+    backend_port = get_free_port()
+    frontend_port = get_free_port()
+
+    env = os.environ.copy()
+    env["BACKEND_PORT"] = str(backend_port)
+    env["FRONTEND_PORT"] = str(frontend_port)
+    env["BACKEND_HOST"] = "127.0.0.1"
+    env["FRONTEND_HOST"] = "127.0.0.1"
+    env["OPENAI_API_KEY"] = env.get("OPENAI_API_KEY", "test-key")
+
+    proc = subprocess.Popen(
+        [SCRIPT_PATH, "all"],
+        cwd=PROJECT_ROOT,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+        env=env,
+        preexec_fn=os.setsid,
+    )
+
+    try:
+        backend_url = f"http://127.0.0.1:{backend_port}/"
+        backend_ready = False
+        start_time = time.time()
+        while time.time() - start_time < 20:
+            if proc.poll() is not None:
+                stdout, stderr = proc.communicate()
+                pytest.fail(f"run.sh terminated prematurely: {stdout}\n{stderr}")
+            try:
+                with urllib.request.urlopen(backend_url, timeout=1.0) as resp:
+                    if resp.status == 200:
+                        backend_ready = True
+                        break
+            except Exception:
+                time.sleep(0.5)
+
+        assert backend_ready, "Backend failed to become healthy in run_all mode"
+        time.sleep(1)
+
+        # Find the Streamlit child process PID listening on frontend_port
+        res = subprocess.run(
+            ["lsof", "-t", "-i", f":{frontend_port}"],
+            capture_output=True,
+            text=True,
+        )
+        assert res.returncode == 0 and res.stdout.strip(), f"Could not find Streamlit frontend PID using lsof on port {frontend_port}: {res.stderr}"
+        frontend_pid = int(res.stdout.strip().split()[0])
+
+        # Kill the frontend process to simulate a crash
+        os.kill(frontend_pid, signal.SIGKILL)
+
+        stdout, stderr = proc.communicate(timeout=15)
+        assert proc.returncode != 0, f"Expected non-zero returncode on frontend crash, got {proc.returncode}"
+        assert "Streamlit frontend process" in stderr or "Streamlit frontend process" in stdout or "terminated unexpectedly" in stderr or "terminated unexpectedly" in stdout
+
+        time.sleep(1)
+        assert not is_port_in_use(backend_port), f"Backend port {backend_port} was not released after frontend crash"
+        assert not is_port_in_use(frontend_port), f"Frontend port {frontend_port} was not released after frontend crash"
+    finally:
+        if proc.poll() is None:
+            try:
+                os.killpg(os.getpgid(proc.pid), signal.SIGKILL)
+            except Exception:
+                pass
+
+
 def test_dockerfile_configures_backend_host_all_interfaces():
     """Test that Dockerfile sets ENV BACKEND_HOST=0.0.0.0 and exposes ports 8501 and 8000."""
     dockerfile_path = os.path.join(PROJECT_ROOT, "Dockerfile")

@@ -323,14 +323,43 @@ run_all() {
     log_info "=================================================="
 
     local exit_code=0
-    wait "$BACKEND_PID" 2>/dev/null || exit_code=$?
-    if [ "$exit_code" -ne 0 ]; then
-        cleanup "$exit_code"
-    fi
-    if [ -n "$FRONTEND_PID" ]; then
-        wait "$FRONTEND_PID" 2>/dev/null || exit_code=$?
-    fi
-    cleanup "$exit_code"
+
+    # Monitor child processes concurrently
+    while true; do
+        local backend_alive=0
+        local frontend_alive=0
+
+        if [ -n "$BACKEND_PID" ] && kill -0 "$BACKEND_PID" 2>/dev/null; then
+            backend_alive=1
+        fi
+        if [ -n "$FRONTEND_PID" ] && kill -0 "$FRONTEND_PID" 2>/dev/null; then
+            frontend_alive=1
+        fi
+
+        if [ "$backend_alive" -eq 0 ] || [ "$frontend_alive" -eq 0 ]; then
+            exit_code=1
+
+            if [ "$backend_alive" -eq 0 ] && [ "$frontend_alive" -eq 1 ]; then
+                log_error "FastAPI backend process (PID: $BACKEND_PID) terminated unexpectedly."
+                wait "$BACKEND_PID" 2>/dev/null || exit_code=$?
+            elif [ "$frontend_alive" -eq 0 ] && [ "$backend_alive" -eq 1 ]; then
+                log_error "Streamlit frontend process (PID: $FRONTEND_PID) terminated unexpectedly."
+                wait "$FRONTEND_PID" 2>/dev/null || exit_code=$?
+            else
+                log_error "One or both service processes terminated unexpectedly."
+                wait "$BACKEND_PID" 2>/dev/null || true
+                wait "$FRONTEND_PID" 2>/dev/null || true
+            fi
+
+            if [ "$exit_code" -eq 0 ]; then
+                exit_code=1
+            fi
+            cleanup "$exit_code"
+            break
+        fi
+
+        sleep 1
+    done
 }
 
 # Run pytest test suite
