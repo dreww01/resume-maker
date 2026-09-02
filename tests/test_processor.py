@@ -210,3 +210,50 @@ def test_call_openai_cover_letter_validation_error(mock_get_client):
 
     with pytest.raises(ValueError, match="AI cover letter output validation failed"):
         call_openai_cover_letter("resume text", "job desc")
+
+
+def test_create_docx_with_none_values():
+    """Verify DOCX generation when dictionary payload contains None for candidate fields."""
+    resume_data = {
+        "name": None,
+        "email": None,
+        "phone": None,
+        "location": None,
+        "github": None,
+        "linkedin": None,
+        "portfolio": None,
+        "professional_summary": None,
+        "work_experience": [
+            {
+                "title": None,
+                "company": None,
+                "duration": None,
+                "bullets": [None, "Built microservices"]
+            }
+        ],
+        "projects": [
+            {
+                "name": None,
+                "bullets": ["Project bullet"]
+            }
+        ],
+        "skills": [None, "Python"],
+        "soft_skills": [None, "Leadership"],
+        "education": [
+            {
+                "degree": None,
+                "institution": None,
+                "year": None
+            }
+        ]
+    }
+
+    docx_bytes = create_docx(resume_data)
+    assert isinstance(docx_bytes, bytes)
+    assert len(docx_bytes) > 0
+
+    doc = Document(io.BytesIO(docx_bytes))
+    full_text = "\n".join([p.text for p in doc.paragraphs])
+    assert "Resume" in full_text
+    assert "Built microservices" in full_text
+    assert "Python" in full_text

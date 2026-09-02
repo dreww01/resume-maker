@@ -368,7 +368,7 @@ def create_docx(resume_data: dict[str, Any] | TailoredResumeData) -> bytes:
     set_document_margins(doc, top=0.5, bottom=0.5, left=0.5, right=0.5)
 
     # 1. Header: Candidate Name
-    candidate_name = data.get("name", "").strip() or "Resume"
+    candidate_name = str(data.get("name") or "").strip() or "Resume"
     name_para = doc.add_paragraph()
     name_run = name_para.add_run(candidate_name)
     name_run.bold = True
@@ -380,7 +380,7 @@ def create_docx(resume_data: dict[str, Any] | TailoredResumeData) -> bytes:
     # 2. Header: Contact Information
     contact_parts: list[str] = []
     for field in ["email", "phone", "location", "github", "linkedin", "portfolio"]:
-        value = str(data.get(field, "") or "").strip()
+        value = str(data.get(field) or "").strip()
         if value:
             contact_parts.append(value)
 
@@ -393,35 +393,36 @@ def create_docx(resume_data: dict[str, Any] | TailoredResumeData) -> bytes:
         contact_para.paragraph_format.space_after = Pt(10)
 
     # 3. Professional Summary
-    summary_text = data.get("professional_summary", "")
-    if summary_text and summary_text.strip():
+    summary_text = str(data.get("professional_summary") or "").strip()
+    if summary_text:
         add_styled_heading(doc, "Professional Summary")
-        summary_para = doc.add_paragraph(summary_text.strip())
+        summary_para = doc.add_paragraph(summary_text)
         summary_para.paragraph_format.space_after = Pt(8)
 
     # 4. Professional Experience
-    work_experience = data.get("work_experience", [])
+    work_experience = data.get("work_experience") or []
     if work_experience:
         add_styled_heading(doc, "Professional Experience")
         for job in work_experience:
             if not isinstance(job, dict):
                 continue
             title_para = doc.add_paragraph()
-            title_run = title_para.add_run(job.get("title", ""))
+            title_run = title_para.add_run(str(job.get("title") or ""))
             title_run.bold = True
             title_run.font.size = Pt(11)
             title_para.paragraph_format.space_after = Pt(2)
 
             company_para = doc.add_paragraph()
-            company_run = company_para.add_run(f"{job.get('company', '')} | ")
+            company_run = company_para.add_run(f"{str(job.get('company') or '')} | ")
             company_run.font.size = Pt(10)
-            duration_run = company_para.add_run(job.get("duration", ""))
+            duration_run = company_para.add_run(str(job.get("duration") or ""))
             duration_run.italic = True
             duration_run.font.size = Pt(10)
             duration_run.font.color.rgb = MUTED_TEXT_COLOR
             company_para.paragraph_format.space_after = Pt(4)
 
-            for bullet in job.get("bullets", []):
+            bullets = job.get("bullets") or []
+            for bullet in bullets:
                 if bullet and str(bullet).strip():
                     add_bullet_item(doc, str(bullet).strip(), space_after=2.0)
 
@@ -429,19 +430,20 @@ def create_docx(resume_data: dict[str, Any] | TailoredResumeData) -> bytes:
             spacer.paragraph_format.space_after = Pt(6)
 
     # 5. Key Projects
-    projects = data.get("projects", [])
+    projects = data.get("projects") or []
     if projects:
         add_styled_heading(doc, "Key Projects")
         for project in projects:
             if not isinstance(project, dict):
                 continue
             project_para = doc.add_paragraph()
-            proj_name_run = project_para.add_run(project.get("name", ""))
+            proj_name_run = project_para.add_run(str(project.get("name") or ""))
             proj_name_run.bold = True
             proj_name_run.font.size = Pt(10.5)
             project_para.paragraph_format.space_after = Pt(2)
 
-            for bullet in project.get("bullets", []):
+            bullets = project.get("bullets") or []
+            for bullet in bullets:
                 if bullet and str(bullet).strip():
                     add_bullet_item(doc, str(bullet).strip(), space_after=2.0)
 
@@ -449,31 +451,35 @@ def create_docx(resume_data: dict[str, Any] | TailoredResumeData) -> bytes:
             spacer.paragraph_format.space_after = Pt(4)
 
     # 6. Technical Skills
-    skills = data.get("skills", [])
+    skills = data.get("skills") or []
     if skills:
-        add_styled_heading(doc, "Technical Skills")
-        skills_para = doc.add_paragraph(" | ".join([str(s) for s in skills if str(s).strip()]))
-        skills_para.paragraph_format.space_after = Pt(8)
+        valid_skills = [str(s) for s in skills if s is not None and str(s).strip()]
+        if valid_skills:
+            add_styled_heading(doc, "Technical Skills")
+            skills_para = doc.add_paragraph(" | ".join(valid_skills))
+            skills_para.paragraph_format.space_after = Pt(8)
 
     # 7. Core Competencies / Soft Skills
-    soft_skills = data.get("soft_skills", [])
+    soft_skills = data.get("soft_skills") or []
     if soft_skills:
-        add_styled_heading(doc, "Core Competencies")
-        soft_skills_para = doc.add_paragraph(" | ".join([str(s) for s in soft_skills if str(s).strip()]))
-        soft_skills_para.paragraph_format.space_after = Pt(8)
+        valid_soft_skills = [str(s) for s in soft_skills if s is not None and str(s).strip()]
+        if valid_soft_skills:
+            add_styled_heading(doc, "Core Competencies")
+            soft_skills_para = doc.add_paragraph(" | ".join(valid_soft_skills))
+            soft_skills_para.paragraph_format.space_after = Pt(8)
 
     # 8. Education
-    education = data.get("education", [])
+    education = data.get("education") or []
     if education:
         add_styled_heading(doc, "Education")
         for edu in education:
             if not isinstance(edu, dict):
                 continue
             edu_para = doc.add_paragraph()
-            degree_run = edu_para.add_run(edu.get("degree", ""))
+            degree_run = edu_para.add_run(str(edu.get("degree") or ""))
             degree_run.bold = True
             degree_run.font.size = Pt(10.5)
-            edu_para.add_run(f" - {edu.get('institution', '')}, {edu.get('year', '')}")
+            edu_para.add_run(f" - {str(edu.get('institution') or '')}, {str(edu.get('year') or '')}")
             edu_para.paragraph_format.space_after = Pt(4)
 
     buffer = io.BytesIO()
