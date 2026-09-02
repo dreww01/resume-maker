@@ -25,9 +25,11 @@ if not OPENAI_API_KEY:
 
 
 def get_openai_client() -> OpenAI:
-    kwargs = {"api_key": OPENAI_API_KEY}
-    if OPENAI_BASE_URL:
-        kwargs["base_url"] = OPENAI_BASE_URL
+    api_key = os.getenv("OPENAI_API_KEY") or OPENAI_API_KEY
+    base_url = os.getenv("OPENAI_BASE_URL")
+    kwargs = {"api_key": api_key}
+    if base_url:
+        kwargs["base_url"] = base_url
     return OpenAI(**kwargs)
 
 

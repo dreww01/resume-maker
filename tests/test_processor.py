@@ -113,6 +113,5 @@ def test_prompt_templates_formatting():
 
 def test_get_openai_client(monkeypatch):
     monkeypatch.setenv("OPENAI_BASE_URL", "http://localhost:11434/v1")
-    monkeypatch.setattr("src.resume_processor.OPENAI_BASE_URL", "http://localhost:11434/v1")
     client = get_openai_client()
     assert str(client.base_url) == "http://localhost:11434/v1/"
