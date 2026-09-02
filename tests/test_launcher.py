@@ -70,6 +70,43 @@ def test_run_test_invokes_pytest():
     assert "passed" in result.stdout.lower() or "pytest" in result.stdout.lower()
 
 
+def test_run_test_uses_python_bin_when_venv_pytest_missing(tmp_path):
+    """Test ./run.sh test uses PYTHON_BIN -m pytest when .venv/bin/pytest does not exist."""
+    mock_run_sh = tmp_path / "run.sh"
+    mock_run_sh.write_text(open(SCRIPT_PATH).read())
+    mock_run_sh.chmod(0o755)
+
+    # Create mock .venv directory without bin/pytest
+    venv_dir = tmp_path / ".venv"
+    venv_bin = venv_dir / "bin"
+    venv_bin.mkdir(parents=True)
+    
+    # Create fake activate and python executable that logs invocation
+    (venv_bin / "activate").write_text("# mock activate\n")
+    fake_python = venv_bin / "python"
+    fake_python.write_text(f"""#!/bin/sh
+if [ "$1" = "-c" ]; then
+    echo "OK"
+    exit 0
+fi
+if [ "$1" = "-m" ] && [ "$2" = "pytest" ]; then
+    echo "MOCK_PYTHON_MODULE_PYTEST_EXECUTED"
+    exit 0
+fi
+exec python3 "$@"
+""")
+    fake_python.chmod(0o755)
+
+    result = subprocess.run(
+        [str(mock_run_sh), "test"],
+        cwd=str(tmp_path),
+        capture_output=True,
+        text=True,
+    )
+    assert result.returncode == 0
+    assert "MOCK_PYTHON_MODULE_PYTEST_EXECUTED" in result.stdout
+
+
 def test_env_auto_initialization(tmp_path):
     """Test that missing .env file is automatically initialized from .env.example."""
     # Create a minimal mock project structure in tmp_path

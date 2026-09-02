@@ -338,8 +338,6 @@ run_tests() {
     log_info "Running test suite with pytest..."
     if [ -x "$SCRIPT_DIR/.venv/bin/pytest" ]; then
         "$SCRIPT_DIR/.venv/bin/pytest" "$@"
-    elif command -v pytest >/dev/null 2>&1; then
-        pytest "$@"
     else
         "$PYTHON_BIN" -m pytest "$@"
     fi
