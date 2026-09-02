@@ -85,8 +85,8 @@ def test_get_nonexistent_resume_status():
 
 
 @patch("src.api.call_openai")
-def test_tailor_resume_flow_with_plain_text(mock_call_openai):
-    """Verify tailoring flow using plain text request body."""
+def test_tailor_resume_flow_with_json_payload(mock_call_openai):
+    """Verify tailoring flow using JSON request payload."""
     doc = Document()
     doc.add_paragraph("Bob Jones")
     buffer = io.BytesIO()
