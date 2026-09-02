@@ -113,10 +113,10 @@ In a second terminal, start the Streamlit UI:
 streamlit run src/frontend.py
 ```
 
-You can also use the startup script:
+You can also use the unified runner script:
 
 ```bash
-./start.sh
+./run.sh
 ```
 
 ### 3. Run Automated Tests

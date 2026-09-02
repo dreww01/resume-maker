@@ -13,7 +13,7 @@ flowchart TD
     User([👤 User / Browser])
 
     subgraph Frontend [Presentation Layer]
-        UI[Streamlit Web App\nsrc/frontend.py\nPort: 7860]
+        UI[Streamlit Web App\nsrc/frontend.py\nPort: 8501]
     end
 
     subgraph Backend [Application Layer]

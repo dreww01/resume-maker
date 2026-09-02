@@ -14,8 +14,10 @@ USER user
 
 COPY --chown=user:user . .
 
-RUN chmod +x start.sh
+RUN chmod +x run.sh start.sh
 
-EXPOSE 7860
+EXPOSE 8501 8000
 
-CMD ["./start.sh"]
+ENV BACKEND_HOST=0.0.0.0
+
+CMD ["./run.sh"]

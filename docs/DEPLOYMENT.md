@@ -10,14 +10,14 @@ Resume Tailor runs as a self-contained container running both the FastAPI backen
 
 ```mermaid
 flowchart TD
-    subgraph Container [Docker Container / Hugging Face Space : 7860]
-        Start[start.sh Entrypoint]
+    subgraph Container [Docker Container / Hugging Face Space : 8501]
+        Start[run.sh Entrypoint]
         Start --> FastAPIService[FastAPI Server\nlocalhost:8000\nBackground Daemon]
-        Start --> StreamlitApp[Streamlit Web UI\n0.0.0.0:7860\nForeground Process]
+        Start --> StreamlitApp[Streamlit Web UI\n0.0.0.0:8501\nForeground Process]
         StreamlitApp <--> FastAPIService
     end
 
-    Client([🌐 External User Browser]) -->|HTTP / WebSocket : 7860| StreamlitApp
+    Client([🌐 External User Browser]) -->|HTTP / WebSocket : 8501| StreamlitApp
     FastAPIService -->|External HTTPS API Calls| OpenAI[OpenAI API Service]
 ```
 
@@ -70,17 +70,17 @@ docker build -t resume-tailor:latest .
 
 ### 3.2 Run the Docker Container
 
-Run the container exposing port `7860` and passing your `OPENAI_API_KEY`:
+Run the container exposing port `8501` and passing your `OPENAI_API_KEY`:
 
 ```bash
 docker run -d \
   --name resume-tailor-app \
-  -p 7860:7860 \
+  -p 8501:8501 \
   -e OPENAI_API_KEY="sk-proj-your-key-here" \
   resume-tailor:latest
 ```
 
-Access the application in your browser at `http://localhost:7860`.
+Access the application in your browser at `http://localhost:8501`.
 
 ### 3.3 Running with Persistent Database Volume
 
@@ -89,7 +89,7 @@ By default, an in-memory SQLite database is used. To persist resumes across cont
 ```bash
 docker run -d \
   --name resume-tailor-app \
-  -p 7860:7860 \
+  -p 8501:8501 \
   -v $(pwd)/data:/app/data \
   -e OPENAI_API_KEY="sk-proj-your-key-here" \
   -e DATABASE_URL="sqlite:////app/data/resume.db" \
@@ -109,7 +109,7 @@ services:
   resume-tailor:
     build: .
     ports:
-      - "7860:7860"
+      - "8501:8501"
     environment:
       - OPENAI_API_KEY=${OPENAI_API_KEY}
       - AI_MODEL=gpt-4o-mini

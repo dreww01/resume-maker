@@ -70,7 +70,7 @@ Make sure you have the following installed on your machine:
 
 Resume Tailor consists of two cooperating services:
 1. **Backend API:** FastAPI running on port `8000`.
-2. **Frontend UI:** Streamlit running on port `7860` (or `8501` by default).
+2. **Frontend UI:** Streamlit running on port `8501`.
 
 ### Running Services Separately (Recommended for Debugging)
 
@@ -87,14 +87,30 @@ streamlit run src/frontend.py
 ```
 - Streamlit web interface opens in your browser at `http://localhost:8501`.
 
-### Running with the Helper Script
+### Running with the Unified Service Runner (`run.sh`)
 
-You can start both services with a single command using `start.sh`:
+You can launch and manage both services with the unified lifecycle runner `run.sh`:
 
 ```bash
-chmod +x start.sh
-./start.sh
+chmod +x run.sh
+./run.sh
 ```
+
+`run.sh` automatically:
+- Detects and activates the local `.venv` environment if present.
+- Validates Python version compatibility (`>= 3.11`).
+- Ensures `.env` exists (auto-initializing from `.env.example` if needed).
+- Validates port availability before launching services.
+- Waits for the FastAPI backend health check to respond before launching Streamlit.
+- Traps `SIGINT` and `SIGTERM` signals to cleanly terminate background child processes.
+
+#### Supported Commands:
+- `./run.sh` (or `./run.sh all`): Launch FastAPI backend (:8000) and Streamlit frontend (:8501).
+- `./run.sh backend`: Launch only the FastAPI backend service.
+- `./run.sh frontend`: Launch only the Streamlit frontend UI.
+- `./run.sh test [pytest_args]`: Run project test suite via pytest.
+- `./run.sh health`: Probe backend and frontend endpoints and report health status.
+- `./run.sh --help`: View launcher CLI documentation and options.
 
 ---
 
@@ -122,13 +138,15 @@ resume-maker/
 ├── tests/                    # Automated test suite
 │   ├── test_database.py      # Database CRUD tests
 │   ├── test_processor.py     # Document & prompt logic tests
-│   └── test_api.py           # FastAPI endpoint tests
+│   ├── test_api.py           # FastAPI endpoint tests
+│   └── test_launcher.py      # Service launcher & runner tests
 ├── .github/                  # GitHub workflows & templates
 │   ├── workflows/sync-to-hf.yml
 │   ├── ISSUE_TEMPLATE/
 │   └── PULL_REQUEST_TEMPLATE.md
 ├── Dockerfile                # Production container specification
-├── start.sh                  # Application startup script
+├── run.sh                    # Unified service lifecycle & test runner
+├── start.sh                  # Backward-compatibility startup script
 ├── pyproject.toml            # Project metadata & dependencies
 ├── requirements.txt          # Python package requirements
 ├── .env.example              # Sample environment configuration
