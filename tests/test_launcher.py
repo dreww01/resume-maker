@@ -385,3 +385,26 @@ def test_frontend_sigterm_trapping():
             except Exception:
                 pass
 
+
+def test_cleanup_preserves_nonzero_exit_status():
+    """Test that startup timeouts / health check failures exit non-zero via cleanup."""
+    backend_port = get_free_port()
+    frontend_port = get_free_port()
+
+    env = os.environ.copy()
+    env["BACKEND_PORT"] = str(backend_port)
+    env["FRONTEND_PORT"] = str(frontend_port)
+    env["HEALTH_TIMEOUT"] = "1"
+
+    result = subprocess.run(
+        [SCRIPT_PATH, "all"],
+        cwd=PROJECT_ROOT,
+        capture_output=True,
+        text=True,
+        env=env,
+        timeout=15,
+    )
+    assert result.returncode != 0, f"Expected non-zero exit code on startup timeout, got {result.returncode}"
+    assert "Timed out waiting for FastAPI backend" in result.stderr or "Timed out waiting for FastAPI backend" in result.stdout
+
+

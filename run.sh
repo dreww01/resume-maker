@@ -32,6 +32,7 @@ log_error() {
 
 # Signal cleanup handler
 cleanup() {
+    local exit_code="${1:-0}"
     if [ "$CLEANING_UP" -eq 1 ]; then
         return
     fi
@@ -80,7 +81,7 @@ cleanup() {
     fi
 
     log_info "All services stopped cleanly."
-    exit 0
+    exit "$exit_code"
 }
 
 trap cleanup SIGINT SIGTERM
@@ -242,7 +243,7 @@ wait_for_backend() {
     while [ "$elapsed" -lt "$HEALTH_TIMEOUT" ]; do
         if [ -n "$BACKEND_PID" ] && ! kill -0 "$BACKEND_PID" 2>/dev/null; then
             log_error "FastAPI backend process terminated unexpectedly during startup."
-            cleanup
+            cleanup 1
             exit 1
         fi
 
@@ -256,7 +257,7 @@ wait_for_backend() {
     done
 
     log_error "Timed out waiting for FastAPI backend to respond after ${HEALTH_TIMEOUT}s."
-    cleanup
+    cleanup 1
     exit 1
 }
 
