@@ -110,8 +110,7 @@ def test_tailor_resume_flow_with_plain_text(mock_call_openai):
 
     response = client.post(
         f"/resumes/{resume_id}/tailor",
-        content="We need a Python developer with FastAPI skills",
-        headers={"Content-Type": "text/plain"}
+        json={"job_description": "We need a Python developer with FastAPI skills"}
     )
     assert response.status_code == 200
     data = response.json()
@@ -207,8 +206,7 @@ def test_generate_cover_letter_flow(mock_call_openai_cover_letter):
 
     response = client.post(
         f"/resumes/{resume_id}/cover-letter",
-        content="Job description for Python backend position",
-        headers={"Content-Type": "text/plain"}
+        json={"job_description": "Job description for Python backend position"}
     )
     assert response.status_code == 200
     data = response.json()
@@ -274,3 +272,12 @@ def test_generate_cover_letter_invalid_schema_returns_502(mock_call_openai_cover
     )
     assert response.status_code == 502
     assert "upstream" in response.json()["detail"].lower() or "ai service failure" in response.json()["detail"].lower()
+
+
+def test_openapi_schema_includes_request_models():
+    """Verify OpenAPI schema includes TailorResumeRequest and CoverLetterRequest schemas."""
+    response = client.get("/openapi.json")
+    assert response.status_code == 200
+    schema = response.json()
+    assert "TailorResumeRequest" in schema["components"]["schemas"]
+    assert "CoverLetterRequest" in schema["components"]["schemas"]

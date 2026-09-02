@@ -19,6 +19,7 @@ from fastapi import (
     UploadFile,
     status,
 )
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
@@ -63,6 +64,14 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    return JSONResponse(
+        status_code=status.HTTP_400_BAD_REQUEST,
+        content={"detail": str(exc)},
+    )
 
 
 @app.get(
@@ -151,15 +160,13 @@ async def upload_resume(
 )
 async def tailor_resume(
     resume_id: int,
-    request: Request,
+    payload: TailorResumeRequest,
 ) -> TailorResumeResponse:
     """Tailor an existing uploaded resume against the target job description.
 
-    Supports both JSON body (`{"job_description": "..."}`) and raw plain text body.
-
     Args:
         resume_id: Unique database primary key of the resume.
-        request: FastAPI Request instance for dynamic body parsing.
+        payload: TailorResumeRequest containing job_description.
 
     Returns:
         TailorResumeResponse containing completion status and candidate user_name.
@@ -174,28 +181,7 @@ async def tailor_resume(
             detail="Resume not found",
         )
 
-    content_type = request.headers.get("content-type", "")
-    body_bytes = await request.body()
-    job_description_text = ""
-
-    if "application/json" in content_type:
-        try:
-            body_json = await request.json()
-            validated_req = TailorResumeRequest.model_validate(body_json)
-            job_description_text = validated_req.job_description
-        except Exception as exc:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Invalid JSON request body: {exc}",
-            )
-    else:
-        # Plain text or fallback
-        job_description_text = body_bytes.decode("utf-8", errors="replace").strip()
-        if len(job_description_text) < 10:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Job description must be at least 10 characters.",
-            )
+    job_description_text = payload.job_description
 
     update_resume(resume_id, status="processing", job_description=job_description_text)
 
@@ -255,13 +241,13 @@ async def tailor_resume(
 )
 async def generate_cover_letter(
     resume_id: int,
-    request: Request,
+    payload: CoverLetterRequest,
 ) -> CoverLetterResponse:
     """Generate a cover letter for the specified resume ID and target job description.
 
     Args:
         resume_id: Unique database primary key of the resume.
-        request: FastAPI Request instance.
+        payload: CoverLetterRequest containing job_description.
 
     Returns:
         CoverLetterResponse with completion status and candidate user_name.
@@ -276,27 +262,7 @@ async def generate_cover_letter(
             detail="Resume not found",
         )
 
-    content_type = request.headers.get("content-type", "")
-    body_bytes = await request.body()
-    job_description_text = ""
-
-    if "application/json" in content_type:
-        try:
-            body_json = await request.json()
-            validated_req = CoverLetterRequest.model_validate(body_json)
-            job_description_text = validated_req.job_description
-        except Exception as exc:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Invalid JSON request body: {exc}",
-            )
-    else:
-        job_description_text = body_bytes.decode("utf-8", errors="replace").strip()
-        if len(job_description_text) < 10:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Job description must be at least 10 characters.",
-            )
+    job_description_text = payload.job_description
 
     try:
         resume_text = read_resume(resume.file_content, resume.original_filename)
