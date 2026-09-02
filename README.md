@@ -163,13 +163,23 @@ streamlit run src/frontend.py
 
 ---
 
-### Option B: Single Startup Script
+### Option B: Unified Service Runner (`run.sh`)
 
-Start both backend and frontend together with `start.sh`:
+Start both backend and frontend together with `run.sh` (handles environment setup, port checks, backend health waiting, and graceful signal cleanup):
 
 ```bash
-chmod +x start.sh
-./start.sh
+chmod +x run.sh
+./run.sh
+```
+
+You can also run specific lifecycle modes:
+
+```bash
+./run.sh backend    # Start only the FastAPI backend (:8000)
+./run.sh frontend   # Start only the Streamlit frontend (:8501)
+./run.sh test       # Run pytest test suite
+./run.sh health     # Probe active backend and frontend health
+./run.sh --help     # Display CLI usage and options
 ```
 
 ---
@@ -183,10 +193,10 @@ Build and run using Docker:
 docker build -t resume-tailor .
 
 # Run container
-docker run -p 7860:7860 -e OPENAI_API_KEY="your-key-here" resume-tailor
+docker run -p 8501:8501 -p 8000:8000 -e OPENAI_API_KEY="your-key-here" resume-tailor
 ```
 
-Open [http://localhost:7860](http://localhost:7860) in your browser.
+Open [http://localhost:8501](http://localhost:8501) in your browser.
 
 ---
 
@@ -259,7 +269,8 @@ resume-maker/
 │   ├── ISSUE_TEMPLATE/
 │   └── PULL_REQUEST_TEMPLATE.md
 ├── Dockerfile                # Docker container specification
-├── start.sh                  # Dual-service startup script
+├── run.sh                    # Unified service lifecycle & test runner
+├── start.sh                  # Backward-compatibility startup script
 ├── pyproject.toml            # Project dependencies & tool config
 ├── requirements.txt          # Python package requirements
 ├── .env.example              # Environment variables template
