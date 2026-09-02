@@ -263,7 +263,8 @@ resume-maker/
 ├── tests/                    # Automated unit & integration tests
 │   ├── test_database.py      # Database layer tests
 │   ├── test_processor.py     # Document & prompt tests
-│   └── test_api.py           # FastAPI endpoint tests
+│   ├── test_api.py           # FastAPI endpoint tests
+│   └── test_launcher.py      # Service launcher & CLI tests
 ├── .github/                  # GitHub workflows & templates
 │   ├── workflows/sync-to-hf.yml
 │   ├── ISSUE_TEMPLATE/
