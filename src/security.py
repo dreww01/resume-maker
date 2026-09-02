@@ -50,31 +50,53 @@ class ContentSizeLimitMiddleware(BaseHTTPMiddleware):
         # Handle chunked / streaming transfers without Content-Length or within threshold
         received_bytes = 0
         original_receive = request._receive
+        exceeded = False
+        exc_detail = "Payload too large. Maximum allowed size is 5MB."
 
         async def receive_with_limit():
-            nonlocal received_bytes
+            nonlocal received_bytes, exceeded, exc_detail
             message = await original_receive()
             if message.get("type") == "http.request":
                 body_chunk = message.get("body", b"")
                 received_bytes += len(body_chunk)
                 if received_bytes > self.max_bytes:
+                    exceeded = True
                     raise HTTPException(
                         status_code=HTTP_413_PAYLOAD_TOO_LARGE,
-                        detail="Payload too large. Maximum allowed size is 5MB.",
+                        detail=exc_detail,
                     )
             return message
 
         request._receive = receive_with_limit
 
         try:
-            return await call_next(request)
-        except HTTPException as exc:
-            if exc.status_code == HTTP_413_PAYLOAD_TOO_LARGE:
+            response = await call_next(request)
+            if exceeded:
                 return JSONResponse(
                     status_code=HTTP_413_PAYLOAD_TOO_LARGE,
-                    content={"detail": exc.detail},
+                    content={"detail": exc_detail},
+                )
+            return response
+        except BaseException as exc:
+            unwrapped = self._unwrap_413_exception(exc)
+            if exceeded or unwrapped is not None:
+                detail = unwrapped.detail if unwrapped and hasattr(unwrapped, "detail") else exc_detail
+                return JSONResponse(
+                    status_code=HTTP_413_PAYLOAD_TOO_LARGE,
+                    content={"detail": detail},
                 )
             raise
+
+    @staticmethod
+    def _unwrap_413_exception(exc: BaseException) -> Optional[HTTPException]:
+        if isinstance(exc, HTTPException) and exc.status_code == HTTP_413_PAYLOAD_TOO_LARGE:
+            return exc
+        if hasattr(exc, "exceptions"):
+            for sub_exc in getattr(exc, "exceptions", []):
+                found = ContentSizeLimitMiddleware._unwrap_413_exception(sub_exc)
+                if found is not None:
+                    return found
+        return None
 
 
 class SecurityHeadersMiddleware(BaseHTTPMiddleware):

@@ -100,6 +100,27 @@ def test_streaming_payload_exceeding_limit_rejected(client):
     assert response.status_code == 413
 
 
+def test_chunked_streaming_payload_without_content_length_exceeding_limit_rejected(client):
+    """Chunked streaming requests omitting Content-Length header exceeding 5MB return HTTP 413."""
+    chunk_size = 1024 * 1024
+    boundary = b"----WebKitFormBoundary7MA4YWxkTrZu0gW"
+
+    def chunk_generator():
+        yield boundary + b"\r\nContent-Disposition: form-data; name=\"file\"; filename=\"resume.pdf\"\r\nContent-Type: application/pdf\r\n\r\n"
+        for _ in range(6):
+            yield b"A" * chunk_size
+        yield b"\r\n--" + boundary + b"--\r\n"
+
+    response = client.post(
+        "/upload",
+        content=chunk_generator(),
+        headers={"Content-Type": f"multipart/form-data; boundary={boundary.decode()}"}
+    )
+    assert response.status_code == 413
+    assert response.json().get("detail") == "Payload too large. Maximum allowed size is 5MB."
+    assert response.headers.get("X-Content-Type-Options") == "nosniff"
+
+
 # ---------------------------------------------------------------------------
 # 3. Rate Limiter Tests
 # ---------------------------------------------------------------------------
