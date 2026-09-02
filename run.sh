@@ -293,6 +293,7 @@ start_frontend() {
         "$PYTHON_BIN" -m streamlit run src/frontend.py --server.port "$FRONTEND_PORT" --server.address "$FRONTEND_HOST" --server.headless true &
         FRONTEND_PID=$!
         log_info "Streamlit frontend running in foreground (PID: $FRONTEND_PID). Press Ctrl+C to terminate."
+        # Wait for foreground frontend PID
         wait "$FRONTEND_PID" 2>/dev/null || true
         cleanup
     fi
