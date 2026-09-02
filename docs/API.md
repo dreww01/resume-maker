@@ -283,4 +283,6 @@ curl -O -J "http://localhost:8000/resumes/1/cover-letter/download"
 | `200 OK` | Success | The request succeeded and data or file binary was returned. |
 | `400 Bad Request` | Client Error | Invalid file format (non-PDF/DOCX) or attempting to download before processing. |
 | `404 Not Found` | Not Found | Requested resume ID or generated document does not exist. |
+| `413 Payload Too Large` | Size Limit Exceeded | Enforced by `ContentSizeLimitMiddleware` when request payload exceeds the 5MB request body size limit. |
+| `429 Too Many Requests` | Rate Limit Exceeded | Enforced by `TokenBucketRateLimiter` when exceeding the rate limit rule of 60 requests per minute. |
 | `500 Server Error` | Internal Error | AI API failure or unexpected document processing error. |
