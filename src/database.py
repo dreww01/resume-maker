@@ -2,8 +2,9 @@ import os
 import logging
 from sqlalchemy.orm import sessionmaker, declarative_base
 from sqlalchemy import create_engine, Column, Integer, String, DateTime, LargeBinary
+from sqlalchemy.pool import StaticPool
 from sqlalchemy.exc import SQLAlchemyError
-from datetime import datetime
+from datetime import datetime, timezone
 from contextlib import contextmanager
 from dotenv import load_dotenv
 
@@ -13,7 +14,17 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///:memory:")
-engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
+
+def get_engine_kwargs(url: str) -> dict:
+    kwargs = {}
+    if url.startswith("sqlite"):
+        kwargs["connect_args"] = {"check_same_thread": False}
+        if ":memory:" in url or "mode=memory" in url or url in ("sqlite://", "sqlite:///"):
+            kwargs["poolclass"] = StaticPool
+    return kwargs
+
+engine_kwargs = get_engine_kwargs(DATABASE_URL)
+engine = create_engine(DATABASE_URL, **engine_kwargs)
 
 Base = declarative_base()
 
@@ -24,7 +35,7 @@ class Resume(Base):
     original_filename = Column(String)
     file_content = Column(LargeBinary)
     user_name = Column(String)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
     status = Column(String)
     job_description = Column(String)
     output_content = Column(LargeBinary)
