@@ -159,6 +159,34 @@ def test_port_collision_detection():
         server_sock.close()
 
 
+def test_custom_host_interface_port_collision_detection():
+    """Test that starting a service with custom BACKEND_HOST evaluates port availability using target host."""
+    backend_port = get_free_port()
+    custom_host = "127.0.0.1"
+
+    server_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    server_sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    server_sock.bind((custom_host, backend_port))
+    server_sock.listen(1)
+
+    try:
+        env = os.environ.copy()
+        env["BACKEND_PORT"] = str(backend_port)
+        env["BACKEND_HOST"] = custom_host
+
+        result = subprocess.run(
+            [SCRIPT_PATH, "backend"],
+            cwd=PROJECT_ROOT,
+            capture_output=True,
+            text=True,
+            env=env,
+        )
+        assert result.returncode != 0
+        assert f"Port {backend_port} is already in use" in result.stderr or f"Port {backend_port} is already in use" in result.stdout
+    finally:
+        server_sock.close()
+
+
 def test_health_check_reporting():
     """Test ./run.sh health reporting for down services."""
     backend_port = get_free_port()
