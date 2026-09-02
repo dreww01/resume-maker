@@ -36,3 +36,10 @@ implementation.md
 *.db
 
 resume.db
+
+# Test & tooling caches
+.pytest_cache/
+.uv_cache/
+.coverage
+htmlcov/
+
