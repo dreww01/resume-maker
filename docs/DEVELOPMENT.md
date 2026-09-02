@@ -70,7 +70,7 @@ Make sure you have the following installed on your machine:
 
 Resume Tailor consists of two cooperating services:
 1. **Backend API:** FastAPI running on port `8000`.
-2. **Frontend UI:** Streamlit running on port `7860` (or `8501` by default).
+2. **Frontend UI:** Streamlit running on port `8501`.
 
 ### Running Services Separately (Recommended for Debugging)
 

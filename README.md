@@ -39,7 +39,7 @@ flowchart TD
     User([👤 User / Browser])
 
     subgraph Client [Presentation]
-        UI[Streamlit UI\nPort 7860]
+        UI[Streamlit UI\nPort 8501]
     end
 
     subgraph Server [Backend Application]
