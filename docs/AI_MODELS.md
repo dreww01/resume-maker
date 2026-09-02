@@ -41,6 +41,7 @@ flowchart TD
 | Environment Variable | Default Value | Description |
 | :--- | :--- | :--- |
 | `OPENAI_API_KEY` | *(Required)* | API key for the AI provider. |
+| `OPENAI_BASE_URL` | *(Optional)* | Custom base URL for OpenAI-compatible alternative providers. |
 | `AI_MODEL` | `gpt-4o-mini` | Model used for resume tailoring and cover letter generation. |
 | `VISION_MODEL` | `gpt-4o-mini` | Multimodal model used for PDF text extraction. |
 
@@ -123,23 +124,23 @@ VISION_MODEL=gpt-4o-mini
 Using Gemini's OpenAI-compatible endpoint:
 ```env
 OPENAI_API_KEY=your_gemini_api_key
+OPENAI_BASE_URL=https://generativelanguage.googleapis.com/v1beta/openai/
 AI_MODEL=gemini-2.0-flash
 VISION_MODEL=gemini-2.0-flash
 ```
-*In `src/resume_processor.py`, configure `base_url="https://generativelanguage.googleapis.com/v1beta/openai/"` on the `OpenAI` client.*
 
 ### 4.3 Groq (Fast & Free Tier)
 ```env
 OPENAI_API_KEY=your_groq_api_key
+OPENAI_BASE_URL=https://api.groq.com/openai/v1
 AI_MODEL=llama-3.1-70b-versatile
 VISION_MODEL=llama-3.2-90b-vision-preview
 ```
-*In `src/resume_processor.py`, configure `base_url="https://api.groq.com/openai/v1"` on the `OpenAI` client.*
 
 ### 4.4 Local Models with Ollama (100% Free & Private)
 ```env
 OPENAI_API_KEY=ollama
+OPENAI_BASE_URL=http://localhost:11434/v1
 AI_MODEL=llama3.1
 VISION_MODEL=llava
 ```
-*In `src/resume_processor.py`, configure `base_url="http://localhost:11434/v1"` on the `OpenAI` client.*

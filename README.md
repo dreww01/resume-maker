@@ -195,6 +195,7 @@ Open [http://localhost:7860](http://localhost:7860) in your browser.
 | Variable | Required | Default | Description |
 | :--- | :---: | :--- | :--- |
 | `OPENAI_API_KEY` | **Yes** | — | API key for OpenAI or compatible provider. |
+| `OPENAI_BASE_URL` | No | — | Base URL for OpenAI-compatible providers (e.g. Gemini, Groq, Ollama). |
 | `AI_MODEL` | No | `gpt-4o-mini` | Model used for resume tailoring and cover letters. |
 | `VISION_MODEL` | No | `gpt-4o-mini` | Vision model used for PDF OCR parsing. |
 | `DATABASE_URL` | No | `sqlite:///:memory:` | SQLAlchemy connection string (e.g. `sqlite:///resume.db`). |
@@ -202,11 +203,11 @@ Open [http://localhost:7860](http://localhost:7860) in your browser.
 
 ### 🤖 Free & Alternative AI Models
 
-You can easily switch to free or self-hosted models:
+You can easily switch to free or self-hosted models by configuring environment variables:
 
-- **Google Gemini (Free tier):** Set `AI_MODEL=gemini-2.0-flash` and provide your Google Gemini API key.
-- **Groq (Ultra-fast & free tier):** Set `AI_MODEL=llama-3.1-70b-versatile` and `VISION_MODEL=llama-3.2-90b-vision-preview`.
-- **Ollama (100% Free & Local):** Run Ollama locally with `llama3.1` and `llava`.
+- **Google Gemini (Free tier):** Set `OPENAI_BASE_URL="https://generativelanguage.googleapis.com/v1beta/openai/"`, `AI_MODEL=gemini-2.0-flash`, `VISION_MODEL=gemini-2.0-flash`, and provide your Gemini API key in `OPENAI_API_KEY`.
+- **Groq (Ultra-fast & free tier):** Set `OPENAI_BASE_URL="https://api.groq.com/openai/v1"`, `AI_MODEL=llama-3.1-70b-versatile`, `VISION_MODEL=llama-3.2-90b-vision-preview`, and set `OPENAI_API_KEY`.
+- **Ollama (100% Free & Local):** Set `OPENAI_BASE_URL="http://localhost:11434/v1"`, `OPENAI_API_KEY=ollama`, `AI_MODEL=llama3.1`, `VISION_MODEL=llava`.
 
 > For complete multi-provider configuration details, see [docs/AI_MODELS.md](docs/AI_MODELS.md).
 

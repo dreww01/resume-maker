@@ -1,7 +1,7 @@
 import io
 import pytest
 from docx import Document
-from src.resume_processor import create_docx, create_cover_letter_docx, read_resume
+from src.resume_processor import create_docx, create_cover_letter_docx, read_resume, get_openai_client
 from src.prompts.resume_tailor import SYSTEM_PROMPT, USER_PROMPT_TEMPLATE
 from src.prompts.cover_letter import COVER_LETTER_SYSTEM_PROMPT, COVER_LETTER_USER_TEMPLATE
 
@@ -109,3 +109,10 @@ def test_prompt_templates_formatting():
     )
     assert "Sample candidate resume" in formatted_cover_letter
     assert "Target job requirements" in formatted_cover_letter
+
+
+def test_get_openai_client(monkeypatch):
+    monkeypatch.setenv("OPENAI_BASE_URL", "http://localhost:11434/v1")
+    monkeypatch.setattr("src.resume_processor.OPENAI_BASE_URL", "http://localhost:11434/v1")
+    client = get_openai_client()
+    assert str(client.base_url) == "http://localhost:11434/v1/"
