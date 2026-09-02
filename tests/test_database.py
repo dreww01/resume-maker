@@ -1,5 +1,34 @@
 import pytest
-from src.database import create_resume, get_resume, update_resume, delete_resume
+from sqlalchemy import create_engine
+from sqlalchemy.pool import StaticPool
+from src.database import create_resume, get_resume, update_resume, delete_resume, get_engine_kwargs
+
+
+def test_in_memory_sqlite_uses_static_pool():
+    in_memory_urls = [
+        "sqlite:///:memory:",
+        "sqlite://",
+        "sqlite:///",
+        "sqlite:///file:memdb1?mode=memory&cache=shared",
+    ]
+    for url in in_memory_urls:
+        kwargs = get_engine_kwargs(url)
+        assert kwargs.get("poolclass") == StaticPool
+        engine = create_engine(url, **kwargs)
+        assert isinstance(engine.pool, StaticPool)
+
+
+def test_file_based_sqlite_does_not_use_static_pool():
+    file_urls = [
+        "sqlite:///test.db",
+        "sqlite:////tmp/test.db",
+    ]
+    for url in file_urls:
+        kwargs = get_engine_kwargs(url)
+        assert kwargs.get("poolclass") != StaticPool
+        engine = create_engine(url, **kwargs)
+        assert not isinstance(engine.pool, StaticPool)
+
 
 
 def test_create_and_get_resume():

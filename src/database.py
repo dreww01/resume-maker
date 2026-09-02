@@ -14,12 +14,16 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///:memory:")
-engine_kwargs = {}
-if DATABASE_URL.startswith("sqlite"):
-    engine_kwargs["connect_args"] = {"check_same_thread": False}
-    if ":memory:" in DATABASE_URL:
-        engine_kwargs["poolclass"] = StaticPool
 
+def get_engine_kwargs(url: str) -> dict:
+    kwargs = {}
+    if url.startswith("sqlite"):
+        kwargs["connect_args"] = {"check_same_thread": False}
+        if ":memory:" in url or "mode=memory" in url or url in ("sqlite://", "sqlite:///"):
+            kwargs["poolclass"] = StaticPool
+    return kwargs
+
+engine_kwargs = get_engine_kwargs(DATABASE_URL)
 engine = create_engine(DATABASE_URL, **engine_kwargs)
 
 Base = declarative_base()
