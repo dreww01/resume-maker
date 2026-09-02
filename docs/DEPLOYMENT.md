@@ -11,7 +11,7 @@ Resume Tailor runs as a self-contained container running both the FastAPI backen
 ```mermaid
 flowchart TD
     subgraph Container [Docker Container / Hugging Face Space : 8501]
-        Start[start.sh Entrypoint]
+        Start[run.sh Entrypoint]
         Start --> FastAPIService[FastAPI Server\nlocalhost:8000\nBackground Daemon]
         Start --> StreamlitApp[Streamlit Web UI\n0.0.0.0:8501\nForeground Process]
         StreamlitApp <--> FastAPIService
