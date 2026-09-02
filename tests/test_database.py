@@ -1,9 +1,13 @@
 """Unit tests for SQLAlchemy database models and repository layer operations."""
 
+from unittest.mock import patch
 import pytest
 from sqlalchemy import create_engine
+from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.orm import Session as OrmSession
 from sqlalchemy.pool import StaticPool
 from src.database import (
+    Resume,
     ResumeRepository,
     create_resume,
     delete_resume,
@@ -150,3 +154,39 @@ def test_repository_with_explicit_session():
         deleted = repo.delete(created.id)
         assert deleted is True
         assert repo.get_by_id(created.id) is None
+
+
+def test_get_session_rollback_on_sqlalchemy_error():
+    """Verify session rollback occurs when SQLAlchemyError is raised."""
+    with patch.object(OrmSession, "rollback") as mock_rollback:
+        with pytest.raises(SQLAlchemyError):
+            with get_session():
+                raise SQLAlchemyError("Simulated database failure")
+        mock_rollback.assert_called_once()
+
+
+def test_get_session_rollback_on_non_sqlalchemy_exception():
+    """Verify session rollback occurs when a non-SQLAlchemy exception (e.g. ValueError) is raised."""
+    with patch.object(OrmSession, "rollback") as mock_rollback:
+        with pytest.raises(ValueError, match="Non-database application exception"):
+            with get_session() as session:
+                resume = Resume(original_filename="rollback_test.pdf", file_content=b"test")
+                session.add(resume)
+                raise ValueError("Non-database application exception")
+        mock_rollback.assert_called_once()
+
+
+def test_get_session_rollback_state_verification():
+    """Verify uncommitted database state is discarded on non-database exception."""
+    filename = "should_not_exist.pdf"
+    with pytest.raises(RuntimeError):
+        with get_session() as session:
+            resume = Resume(original_filename=filename, file_content=b"test data")
+            session.add(resume)
+            session.flush()
+            created_id = resume.id
+            raise RuntimeError("Operation aborted")
+
+    with get_session() as session:
+        repo = ResumeRepository(session=session)
+        assert repo.get_by_id(created_id) is None

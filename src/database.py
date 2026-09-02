@@ -140,6 +140,7 @@ def get_session() -> Generator[OrmSession, None, None]:
 
     Raises:
         SQLAlchemyError: Propagates database exceptions after rolling back.
+        Exception: Propagates non-database exceptions after rolling back.
     """
     session: OrmSession = SessionLocal()
     try:
@@ -148,6 +149,9 @@ def get_session() -> Generator[OrmSession, None, None]:
     except SQLAlchemyError as exc:
         session.rollback()
         logger.error("Database error occurred during session execution: %s", exc, exc_info=True)
+        raise
+    except Exception:
+        session.rollback()
         raise
     finally:
         session.close()
