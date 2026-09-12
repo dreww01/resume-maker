@@ -13,10 +13,12 @@ from datetime import datetime, timezone
 from typing import Any, Generator, Optional
 
 from dotenv import load_dotenv
-from sqlalchemy import DateTime, Integer, LargeBinary, String, create_engine
+from sqlalchemy import DateTime, Integer, LargeBinary, String, create_engine, func
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import DeclarativeBase, Mapped, Session as OrmSession, mapped_column, sessionmaker
 from sqlalchemy.pool import StaticPool
+
+from src.cache import cache, DEFAULT_CACHE_TTL, DASHBOARD_CACHE_TTL
 
 load_dotenv()
 
@@ -200,12 +202,16 @@ class ResumeRepository:
         if self._session is not None:
             self._session.add(resume)
             self._session.flush()
+            cache.invalidate_by_tag("dashboard")
+            cache.invalidate_by_tag("summary")
             return resume
 
         with get_session() as session:
             session.add(resume)
             session.flush()
             session.refresh(resume)
+            cache.invalidate_by_tag("dashboard")
+            cache.invalidate_by_tag("summary")
             return resume
 
     def get_by_id(self, resume_id: int) -> Optional[Resume]:
@@ -223,8 +229,16 @@ class ResumeRepository:
         if self._session is not None:
             return self._session.query(Resume).filter(Resume.id == resume_id).first()
 
+        cache_key = f"resume:{resume_id}"
+        cached_resume = cache.get(cache_key)
+        if cached_resume is not None:
+            return cached_resume
+
         with get_session() as session:
-            return session.query(Resume).filter(Resume.id == resume_id).first()
+            resume = session.query(Resume).filter(Resume.id == resume_id).first()
+            if resume is not None:
+                cache.set(cache_key, resume, ttl=DEFAULT_CACHE_TTL, tags={"resume", cache_key})
+            return resume
 
     def update(self, resume_id: int, **fields: Any) -> Optional[Resume]:
         """Update fields of an existing resume record.
@@ -239,6 +253,11 @@ class ResumeRepository:
         Raises:
             SQLAlchemyError: If database update fails.
         """
+        cache.delete(f"resume:{resume_id}")
+        cache.invalidate_by_tag(f"resume:{resume_id}")
+        cache.invalidate_by_tag("dashboard")
+        cache.invalidate_by_tag("summary")
+
         if self._session is not None:
             resume = self._session.query(Resume).filter(Resume.id == resume_id).first()
             if not resume:
@@ -272,6 +291,11 @@ class ResumeRepository:
         Raises:
             SQLAlchemyError: If database deletion fails.
         """
+        cache.delete(f"resume:{resume_id}")
+        cache.invalidate_by_tag(f"resume:{resume_id}")
+        cache.invalidate_by_tag("dashboard")
+        cache.invalidate_by_tag("summary")
+
         if self._session is not None:
             resume = self._session.query(Resume).filter(Resume.id == resume_id).first()
             if not resume:
@@ -286,6 +310,104 @@ class ResumeRepository:
                 return False
             session.delete(resume)
             return True
+
+    def get_dashboard_summary(self) -> dict[str, Any]:
+        """Compute or retrieve cached dashboard summary metrics and recent activity feeds.
+
+        Returns:
+            Dictionary containing total_resumes, completed_count, pending_count,
+            status_counts, and recent_activity.
+        """
+        cache_key = "dashboard:summary"
+        cached_summary = cache.get(cache_key)
+        if cached_summary is not None:
+            return cached_summary
+
+        def _calculate(session: OrmSession) -> dict[str, Any]:
+            total_count = session.query(func.count(Resume.id)).scalar() or 0
+            status_rows = (
+                session.query(Resume.status, func.count(Resume.id))
+                .group_by(Resume.status)
+                .all()
+            )
+            status_counts = {str(st): count for st, count in status_rows}
+            completed_count = status_counts.get("completed", 0)
+            pending_count = status_counts.get("uploaded", 0) + status_counts.get("processing", 0)
+
+            recent_rows = (
+                session.query(Resume)
+                .order_by(Resume.created_at.desc(), Resume.id.desc())
+                .limit(10)
+                .all()
+            )
+            recent_activity = [
+                {
+                    "id": r.id,
+                    "filename": r.original_filename,
+                    "status": r.status,
+                    "user_name": r.user_name,
+                    "created_at": r.created_at,
+                }
+                for r in recent_rows
+            ]
+
+            return {
+                "total_resumes": total_count,
+                "completed_count": completed_count,
+                "pending_count": pending_count,
+                "status_counts": status_counts,
+                "recent_activity": recent_activity,
+            }
+
+        if self._session is not None:
+            summary = _calculate(self._session)
+        else:
+            with get_session() as session:
+                summary = _calculate(session)
+
+        cache.set(cache_key, summary, ttl=DASHBOARD_CACHE_TTL, tags={"dashboard", "summary"})
+        return summary
+
+    def get_recent_activity(self, limit: int = 10) -> list[dict[str, Any]]:
+        """Retrieve recent resume activity feed with caching.
+
+        Args:
+            limit: Maximum number of recent items to return.
+
+        Returns:
+            List of recent activity dictionaries.
+        """
+        cache_key = f"dashboard:recent_activity:{limit}"
+        cached_feed = cache.get(cache_key)
+        if cached_feed is not None:
+            return cached_feed
+
+        def _fetch(session: OrmSession) -> list[dict[str, Any]]:
+            rows = (
+                session.query(Resume)
+                .order_by(Resume.created_at.desc(), Resume.id.desc())
+                .limit(limit)
+                .all()
+            )
+            return [
+                {
+                    "id": r.id,
+                    "filename": r.original_filename,
+                    "status": r.status,
+                    "user_name": r.user_name,
+                    "created_at": r.created_at,
+                }
+                for r in rows
+            ]
+
+        if self._session is not None:
+            activity = _fetch(self._session)
+        else:
+            with get_session() as session:
+                activity = _fetch(session)
+
+        cache.set(cache_key, activity, ttl=DASHBOARD_CACHE_TTL, tags={"dashboard", "summary"})
+        return activity
 
 
 # Global default repository instance
@@ -368,3 +490,24 @@ def delete_resume(resume_id: int) -> bool:
         SQLAlchemyError: If database deletion fails.
     """
     return _repo.delete(resume_id)
+
+
+def get_dashboard_summary() -> dict[str, Any]:
+    """Retrieve aggregated dashboard metrics and activity feed with caching.
+
+    Returns:
+        Dictionary of dashboard metrics.
+    """
+    return _repo.get_dashboard_summary()
+
+
+def get_recent_activity(limit: int = 10) -> list[dict[str, Any]]:
+    """Retrieve recent resume activity feed with caching.
+
+    Args:
+        limit: Number of recent items to fetch.
+
+    Returns:
+        List of recent activity item dicts.
+    """
+    return _repo.get_recent_activity(limit=limit)

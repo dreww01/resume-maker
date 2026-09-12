@@ -276,6 +276,63 @@ curl -O -J "http://localhost:8000/resumes/1/cover-letter/download"
 
 ---
 
+### 2.8 Dashboard Summary Metrics & Recent Activity
+
+```http
+GET /dashboard/summary
+```
+*(Also accessible via `GET /dashboard`)*
+
+Returns aggregated dashboard metrics including total resume count, status breakdown, and recent activity feeds. Responses are cached with short configurable TTL (`DASHBOARD_CACHE_TTL_SECONDS`) and invalidated automatically on resume upload, tailoring, or deletion.
+
+#### Response `200 OK`
+- **Headers:** `X-Cache: HIT` (or `MISS`), `Cache-Control: public, max-age=60`
+```json
+{
+  "total_resumes": 12,
+  "completed_count": 8,
+  "pending_count": 4,
+  "status_counts": {
+    "completed": 8,
+    "uploaded": 3,
+    "processing": 1
+  },
+  "recent_activity": [
+    {
+      "id": 12,
+      "filename": "john_doe.pdf",
+      "status": "completed",
+      "user_name": "John Doe",
+      "created_at": "2025-01-15T12:00:00"
+    }
+  ],
+  "cached": true
+}
+```
+
+---
+
+### 2.9 Cache Hit-Rate & Operational Metrics
+
+```http
+GET /cache/stats
+```
+
+Returns operational monitoring statistics for the in-memory cache, including cache hits, misses, total requests, hit rate, and stored size.
+
+#### Response `200 OK`
+```json
+{
+  "hits": 45,
+  "misses": 5,
+  "total_requests": 50,
+  "hit_rate": 0.9,
+  "size": 12
+}
+```
+
+---
+
 ## 3. Summary of HTTP Status Codes
 
 | Status Code | Reason | Description |

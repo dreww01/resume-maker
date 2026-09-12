@@ -23,7 +23,14 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from src.database import create_resume, get_resume_model, update_resume
+from src.cache import cache, DEFAULT_CACHE_TTL, DASHBOARD_CACHE_TTL
+from src.database import (
+    create_resume,
+    get_dashboard_summary,
+    get_recent_activity,
+    get_resume_model,
+    update_resume,
+)
 from src.resume_processor import (
     call_openai,
     call_openai_cover_letter,
@@ -32,8 +39,10 @@ from src.resume_processor import (
     read_resume,
 )
 from src.schemas import (
+    CacheStatsResponse,
     CoverLetterRequest,
     CoverLetterResponse,
+    DashboardSummaryResponse,
     ErrorResponse,
     ResumeResponse,
     ResumeUploadResponse,
@@ -313,11 +322,12 @@ def generate_cover_letter(
         status.HTTP_404_NOT_FOUND: {"model": ErrorResponse},
     },
 )
-def get_resume_status(resume_id: int) -> ResumeResponse:
+def get_resume_status(resume_id: int, response: Response) -> ResumeResponse:
     """Retrieve metadata and artifact generation flags for a resume record.
 
     Args:
         resume_id: Primary key integer of the resume.
+        response: FastAPI response object to inject cache status headers.
 
     Returns:
         Typed ResumeResponse schema.
@@ -325,12 +335,16 @@ def get_resume_status(resume_id: int) -> ResumeResponse:
     Raises:
         HTTPException: 404 Not Found if resume does not exist.
     """
+    was_cached = cache.has(f"resume:{resume_id}")
     resume = get_resume_model(resume_id)
     if not resume:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Resume not found",
         )
+
+    response.headers["X-Cache"] = "HIT" if was_cached else "MISS"
+    response.headers["Cache-Control"] = f"public, max-age={int(DEFAULT_CACHE_TTL)}"
 
     return ResumeResponse(
         id=resume.id,
@@ -343,6 +357,63 @@ def get_resume_status(resume_id: int) -> ResumeResponse:
         has_cover_letter=resume.has_cover_letter,
         has_output=resume.has_tailored_resume,
     )
+
+
+@app.get(
+    "/dashboard",
+    response_model=DashboardSummaryResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Dashboard Summary Metrics & Activity Feed",
+    description="Returns cached summary metrics (total resumes, status breakdown) and recent activity feed.",
+    tags=["Dashboard"],
+)
+@app.get(
+    "/dashboard/summary",
+    response_model=DashboardSummaryResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Dashboard Summary Metrics & Activity Feed",
+    description="Returns cached summary metrics and recent activity feeds with short configurable expiration.",
+    tags=["Dashboard"],
+)
+def get_dashboard(response: Response) -> DashboardSummaryResponse:
+    """Retrieve aggregated summary metrics and recent activity feed with caching.
+
+    Args:
+        response: FastAPI response object for customizing headers.
+
+    Returns:
+        DashboardSummaryResponse schema with summary counts and activity list.
+    """
+    was_cached = cache.has("dashboard:summary")
+    data = get_dashboard_summary()
+    response.headers["X-Cache"] = "HIT" if was_cached else "MISS"
+    response.headers["Cache-Control"] = f"public, max-age={int(DASHBOARD_CACHE_TTL)}"
+    return DashboardSummaryResponse(
+        total_resumes=data["total_resumes"],
+        completed_count=data["completed_count"],
+        pending_count=data["pending_count"],
+        status_counts=data["status_counts"],
+        recent_activity=data["recent_activity"],
+        cached=was_cached,
+    )
+
+
+@app.get(
+    "/cache/stats",
+    response_model=CacheStatsResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Cache Hit-Rate & Operational Metrics",
+    description="Returns operational cache metrics including hits, misses, hit rate, and total size.",
+    tags=["Monitoring"],
+)
+def get_cache_stats() -> CacheStatsResponse:
+    """Retrieve operational cache metrics and hit-rate statistics.
+
+    Returns:
+        CacheStatsResponse with hits, misses, hit_rate, and size.
+    """
+    stats = cache.get_stats()
+    return CacheStatsResponse(**stats)
 
 
 @app.get(

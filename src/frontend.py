@@ -17,6 +17,23 @@ API_URL: str = os.getenv("API_URL", "http://127.0.0.1:8000")
 st.set_page_config(page_title="Resume Tailor", page_icon="📄", layout="centered")
 st.title("Resume Tailor & Cover Letter Generator")
 
+with st.sidebar:
+    st.subheader("📊 Dashboard Metrics")
+    try:
+        dash_response = requests.get(f"{API_URL}/dashboard/summary", timeout=5)
+        if dash_response.status_code == 200:
+            dash_data = dash_response.json()
+            st.metric("Total Resumes", dash_data.get("total_resumes", 0))
+            st.metric("Completed", dash_data.get("completed_count", 0))
+            st.metric("Pending", dash_data.get("pending_count", 0))
+            recent_acts = dash_data.get("recent_activity", [])
+            if recent_acts:
+                st.caption("Recent Activity:")
+                for item in recent_acts[:5]:
+                    st.text(f"• {item.get('filename')} ({item.get('status')})")
+    except Exception:
+        pass
+
 if "resume_id" not in st.session_state:
     st.session_state.resume_id = None
 if "status" not in st.session_state:

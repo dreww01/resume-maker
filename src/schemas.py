@@ -97,6 +97,40 @@ class ErrorResponse(BaseModel):
     error_code: Optional[str] = Field(None, description="Optional machine-readable error code.")
 
 
+class RecentActivityItem(BaseModel):
+    """Schema for an item in the recent activity feed."""
+    id: int = Field(..., description="Resume identifier.")
+    filename: str = Field(..., description="Original resume filename.")
+    status: str = Field(..., description="Current status of the resume.")
+    user_name: Optional[str] = Field(None, description="Candidate name if available.")
+    created_at: datetime = Field(..., description="Creation timestamp.")
+
+
+class DashboardSummaryResponse(BaseModel):
+    """Schema for dashboard summary metrics and recent activity feeds."""
+    total_resumes: int = Field(..., description="Total number of resumes in the catalog.")
+    completed_count: int = Field(0, description="Count of resumes successfully tailored or processed.")
+    pending_count: int = Field(0, description="Count of uploaded or in-progress resumes.")
+    status_counts: dict[str, int] = Field(
+        default_factory=dict,
+        description="Breakdown of resume counts by status.",
+    )
+    recent_activity: list[RecentActivityItem] = Field(
+        default_factory=list,
+        description="Feed of recent resume activity.",
+    )
+    cached: Optional[bool] = Field(None, description="Whether the response was served from cache.")
+
+
+class CacheStatsResponse(BaseModel):
+    """Schema for cache performance and hit rate monitoring."""
+    hits: int = Field(..., description="Number of cache hits.")
+    misses: int = Field(..., description="Number of cache misses.")
+    total_requests: int = Field(..., description="Total requests processed by the cache.")
+    hit_rate: float = Field(..., description="Cache hit rate as a fraction between 0.0 and 1.0.")
+    size: int = Field(..., description="Current number of cached entries.")
+
+
 # ---------------------------------------------------------------------------
 # AI Structured Output Data Models & Validation Schemas
 # ---------------------------------------------------------------------------
