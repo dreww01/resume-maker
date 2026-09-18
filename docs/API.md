@@ -18,6 +18,7 @@ flowchart TD
 
     subgraph API [FastAPI Endpoints]
         Root["GET /"]
+        Health["GET /api/health"]
         Upload["POST /upload"]
         Tailor["POST /resumes/{id}/tailor"]
         CoverLetter["POST /resumes/{id}/cover-letter"]
@@ -27,6 +28,7 @@ flowchart TD
     end
 
     Client --> Root
+    Client --> Health
     Client --> Upload
     Client --> Tailor
     Client --> CoverLetter
@@ -56,7 +58,26 @@ Returns a basic welcome message and guidance to visit the interactive documentat
 
 ---
 
-### 2.2 Upload Resume
+### 2.2 Hermetic System Health
+
+```http
+GET /api/health
+```
+
+Returns a hermetic JSON payload with service health status, ISO-8601 UTC timestamp, and semantic version.
+
+#### Response `200 OK`
+```json
+{
+  "status": "healthy",
+  "timestamp": "2026-09-03T12:00:00.000000Z",
+  "version": "1.0.0"
+}
+```
+
+---
+
+### 2.3 Upload Resume
 
 ```http
 POST /upload
@@ -96,7 +117,7 @@ curl -X POST "http://localhost:8000/upload" \
 
 ---
 
-### 2.3 Tailor Resume
+### 2.4 Tailor Resume
 
 ```http
 POST /resumes/{resume_id}/tailor
@@ -142,7 +163,7 @@ curl -X POST "http://localhost:8000/resumes/1/tailor" \
 
 ---
 
-### 2.4 Generate Cover Letter
+### 2.5 Generate Cover Letter
 
 ```http
 POST /resumes/{resume_id}/cover-letter
@@ -188,7 +209,7 @@ curl -X POST "http://localhost:8000/resumes/1/cover-letter" \
 
 ---
 
-### 2.5 Get Resume Status & Details
+### 2.6 Get Resume Status & Details
 
 ```http
 GET /resumes/{resume_id}
@@ -219,7 +240,7 @@ Retrieves metadata and generation status for a given resume record.
 
 ---
 
-### 2.6 Download Tailored Resume
+### 2.7 Download Tailored Resume
 
 ```http
 GET /resumes/{resume_id}/download
@@ -248,7 +269,7 @@ curl -O -J "http://localhost:8000/resumes/1/download"
 
 ---
 
-### 2.7 Download Cover Letter
+### 2.8 Download Cover Letter
 
 ```http
 GET /resumes/{resume_id}/cover-letter/download

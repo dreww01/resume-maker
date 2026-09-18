@@ -1,5 +1,6 @@
 """Unit and integration tests for FastAPI backend routes and Pydantic schemas."""
 
+from datetime import datetime, timezone
 import io
 from unittest.mock import patch
 import pytest
@@ -19,6 +20,43 @@ def test_root_endpoint():
     data = response.json()
     assert "message" in data
     assert "Resume Tailor API" in data["message"]
+
+
+def test_health_endpoint():
+    """Verify GET /api/health returns 200 OK with valid health status, timestamp, and version."""
+    before = datetime.now(timezone.utc)
+    response = client.get("/api/health")
+    after = datetime.now(timezone.utc)
+
+    assert response.status_code == 200
+    assert "application/json" in response.headers["content-type"]
+
+    data = response.json()
+    assert set(data.keys()) == {"status", "timestamp", "version"}
+    assert data["status"] == "healthy"
+    assert data["version"] == "1.0.0"
+
+    # Verify timestamp is valid ISO-8601 UTC timestamp
+    parsed_time = datetime.fromisoformat(data["timestamp"])
+    assert parsed_time.tzinfo is not None
+    assert before.timestamp() - 1 <= parsed_time.timestamp() <= after.timestamp() + 1
+
+
+def test_health_endpoint_aliases():
+    """Verify alias paths /health and trailing slash variants return 200 OK."""
+    for path in ["/api/health/", "/health", "/health/"]:
+        response = client.get(path)
+        assert response.status_code == 200
+        data = response.json()
+        assert data["status"] == "healthy"
+        assert data["version"] == "1.0.0"
+        assert "timestamp" in data
+
+
+def test_health_endpoint_head_method():
+    """Verify HEAD /api/health returns 200 OK."""
+    response = client.head("/api/health")
+    assert response.status_code == 200
 
 
 def test_upload_invalid_file_extension():
@@ -275,9 +313,11 @@ def test_generate_cover_letter_invalid_schema_returns_502(mock_call_openai_cover
 
 
 def test_openapi_schema_includes_request_models():
-    """Verify OpenAPI schema includes TailorResumeRequest and CoverLetterRequest schemas."""
+    """Verify OpenAPI schema includes TailorResumeRequest, CoverLetterRequest, and HealthResponse schemas."""
     response = client.get("/openapi.json")
     assert response.status_code == 200
     schema = response.json()
     assert "TailorResumeRequest" in schema["components"]["schemas"]
     assert "CoverLetterRequest" in schema["components"]["schemas"]
+    assert "HealthResponse" in schema["components"]["schemas"]
+    assert "/api/health" in schema["paths"]

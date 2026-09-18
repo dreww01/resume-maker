@@ -1,6 +1,6 @@
 """Pydantic v2 schemas for API request and response models, and AI output validation."""
 
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, Optional
 from pydantic import BaseModel, Field
 
@@ -15,6 +15,25 @@ class RootResponse(BaseModel):
         ...,
         description="Welcome and orientation message for the API.",
         examples=["Welcome to Resume Tailor API, Go to /docs to get started"]
+    )
+
+
+class HealthResponse(BaseModel):
+    """Schema for hermetic system health check response."""
+    status: str = Field(
+        default="healthy",
+        description="Current health status of the service.",
+        examples=["healthy"],
+    )
+    timestamp: datetime = Field(
+        default_factory=lambda: datetime.now(timezone.utc),
+        description="ISO-8601 UTC timestamp of the health check.",
+        examples=["2026-09-03T00:00:00Z"],
+    )
+    version: str = Field(
+        default="1.0.0",
+        description="Semantic application version.",
+        examples=["1.0.0"],
     )
 
 
