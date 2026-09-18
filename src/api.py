@@ -6,6 +6,7 @@ standardized HTTP status codes, and modular database/AI service integration.
 
 from __future__ import annotations
 
+from datetime import datetime, timezone
 import logging
 from typing import Any, Optional
 
@@ -35,6 +36,7 @@ from src.schemas import (
     CoverLetterRequest,
     CoverLetterResponse,
     ErrorResponse,
+    HealthResponse,
     ResumeResponse,
     ResumeUploadResponse,
     RootResponse,
@@ -84,6 +86,42 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
 async def root() -> RootResponse:
     """Return welcome message and interactive documentation link."""
     return RootResponse(message="Welcome to Resume Tailor API, Go to /docs to get started")
+
+
+@app.get(
+    "/api/health",
+    response_model=HealthResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Hermetic Health Check",
+    description="Hermetic health check endpoint returning system health status, UTC timestamp, and version.",
+)
+@app.get(
+    "/api/health/",
+    response_model=HealthResponse,
+    status_code=status.HTTP_200_OK,
+    include_in_schema=False,
+)
+@app.get(
+    "/health",
+    response_model=HealthResponse,
+    status_code=status.HTTP_200_OK,
+    include_in_schema=False,
+)
+@app.get(
+    "/health/",
+    response_model=HealthResponse,
+    status_code=status.HTTP_200_OK,
+    include_in_schema=False,
+)
+@app.head("/api/health", include_in_schema=False)
+@app.head("/health", include_in_schema=False)
+async def health_check() -> HealthResponse:
+    """Return hermetic health status, ISO-8601 UTC timestamp, and version."""
+    return HealthResponse(
+        status="healthy",
+        timestamp=datetime.now(timezone.utc),
+        version="1.0.0",
+    )
 
 
 @app.post(

@@ -228,6 +228,7 @@ You can easily switch to free or self-hosted models by configuring environment v
 | Method | Endpoint | Description |
 | :--- | :--- | :--- |
 | `GET` | `/` | Health check & welcome message. |
+| `GET` | `/api/health` | Hermetic system health, timestamp, and version status. |
 | `POST` | `/upload` | Upload resume file (`.pdf` or `.docx`). |
 | `POST` | `/resumes/{id}/tailor` | Tailor resume against a plain text job description. |
 | `POST` | `/resumes/{id}/cover-letter` | Generate a customized cover letter for the job. |
